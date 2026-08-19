@@ -14,7 +14,7 @@ const titles: Record<string, { title: string; subtitle: string }> = {
   },
   "/fleet": {
     title: "Автопарк",
-    subtitle: "Транспортные средства, водители и статусы",
+    subtitle: "Машины, прицепы, водители и статусы",
   },
   "/fuel": {
     title: "Топливо",
