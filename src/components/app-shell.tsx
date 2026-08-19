@@ -34,7 +34,7 @@ const titles: Record<string, { title: string; subtitle: string }> = {
   },
   "/warehouse": {
     title: "Склад",
-    subtitle: "Запчасти, остатки и минимальные запасы",
+    subtitle: "Номенклатура запчастей с ценой и остатками",
   },
   "/reports": {
     title: "Отчёты",
