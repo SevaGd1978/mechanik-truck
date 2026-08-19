@@ -20,10 +20,6 @@ const titles: Record<string, { title: string; subtitle: string }> = {
     title: "Сервис и ТО",
     subtitle: "Заказ-наряды: нормо-часы, ставка и запчасти со склада",
   },
-  "/trips": {
-    title: "Поездки",
-    subtitle: "Путевые листы и маршруты",
-  },
   "/warehouse": {
     title: "Склад",
     subtitle: "Номенклатура запчастей с ценой и остатками",

@@ -23,17 +23,6 @@ export type ServiceOrder = {
   cost: number;
 };
 
-export type Trip = {
-  id: string;
-  vehicle: string;
-  driver: string;
-  from: string;
-  to: string;
-  date: string;
-  status: "planned" | "active" | "done";
-  km: number;
-};
-
 export const kpis = [
   {
     id: "cost",
@@ -189,49 +178,6 @@ export const serviceOrders: ServiceOrder[] = [
   },
 ];
 
-export const trips: Trip[] = [
-  {
-    id: "t1",
-    vehicle: "А123ВС 77",
-    driver: "Иванов П.",
-    from: "Москва",
-    to: "Казань",
-    date: "19.08.2026",
-    status: "active",
-    km: 820,
-  },
-  {
-    id: "t2",
-    vehicle: "К450МН 50",
-    driver: "Смирнов А.",
-    from: "Химки",
-    to: "Тула",
-    date: "19.08.2026",
-    status: "planned",
-    km: 190,
-  },
-  {
-    id: "t3",
-    vehicle: "Е901ОР 777",
-    driver: "Козлова М.",
-    from: "Офис",
-    to: "Клиент ЮАО",
-    date: "18.08.2026",
-    status: "done",
-    km: 42,
-  },
-  {
-    id: "t4",
-    vehicle: "Т015ХХ 77",
-    driver: "Никитин В.",
-    from: "Склад",
-    to: "Домодедово",
-    date: "18.08.2026",
-    status: "done",
-    km: 68,
-  },
-];
-
 export const warehouseItems = [
   { id: "w1", name: "Масло моторное 10W-40", sku: "OIL-1040", qty: 48, unit: "л", min: 20 },
   { id: "w2", name: "Фильтр масляный КамАЗ", sku: "FLT-KAM", qty: 12, unit: "шт", min: 8 },
@@ -291,8 +237,8 @@ export const activity = [
   },
   {
     id: "a4",
-    title: "Путевой лист открыт",
-    detail: "Москва → Казань · Иванов П.",
+    title: "ТС добавлено",
+    detail: "Газель Next · Т015ХХ 77",
     time: "2 ч назад",
     tone: "warning" as const,
   },
@@ -302,7 +248,6 @@ export const navItems = [
   { href: "/", label: "Обзор", icon: "LayoutDashboard" },
   { href: "/fleet", label: "Автопарк", icon: "Truck" },
   { href: "/service", label: "Сервис", icon: "Wrench" },
-  { href: "/trips", label: "Поездки", icon: "Route" },
   { href: "/warehouse", label: "Склад", icon: "Package" },
   { href: "/reports", label: "Отчёты", icon: "BarChart3" },
   { href: "/users", label: "Пользователи", icon: "Users" },
