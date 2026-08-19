@@ -1,0 +1,84 @@
+"use client";
+
+import { Menu, Moon, Search, Sun, Bell } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useTheme } from "@/components/theme-provider";
+
+export function Toolbar({
+  title,
+  subtitle,
+  onMenu,
+  onSearch,
+}: {
+  title: string;
+  subtitle?: string;
+  onMenu: () => void;
+  onSearch: () => void;
+}) {
+  const { theme, toggleTheme } = useTheme();
+
+  return (
+    <header className="sticky top-0 z-20 flex h-[var(--toolbar-h)] items-center gap-3 border-b border-[var(--border)] bg-[var(--bg-window)]/80 px-3 backdrop-blur-xl md:px-5">
+      <button
+        type="button"
+        onClick={onMenu}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)] md:hidden"
+        aria-label="Открыть меню"
+      >
+        <Menu size={18} />
+      </button>
+
+      <div className="min-w-0 flex-1">
+        <h1 className="truncate text-[15px] font-semibold tracking-tight">
+          {title}
+        </h1>
+        {subtitle ? (
+          <p className="truncate text-[12px] text-[var(--fg-secondary)]">
+            {subtitle}
+          </p>
+        ) : null}
+      </div>
+
+      <button
+        type="button"
+        onClick={onSearch}
+        className="hidden h-8 items-center gap-2 rounded-[10px] border border-[var(--border-strong)] bg-[var(--bg-input)] px-3 text-[12px] text-[var(--fg-tertiary)] shadow-[var(--shadow-sm)] transition hover:bg-[var(--bg-hover)] sm:inline-flex"
+      >
+        <Search size={14} />
+        Поиск
+        <kbd className="rounded bg-[var(--bg-active)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--fg-secondary)]">
+          ⌘K
+        </kbd>
+      </button>
+
+      <button
+        type="button"
+        onClick={onSearch}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)] sm:hidden"
+        aria-label="Поиск"
+      >
+        <Search size={16} />
+      </button>
+
+      <button
+        type="button"
+        className="relative inline-flex h-8 w-8 items-center justify-center rounded-[8px] text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)]"
+        aria-label="Уведомления"
+      >
+        <Bell size={16} />
+        <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-[var(--danger)]" />
+      </button>
+
+      <button
+        type="button"
+        onClick={toggleTheme}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)]"
+        aria-label="Переключить тему"
+      >
+        {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+      </button>
+
+      <Button size="sm">Добавить</Button>
+    </header>
+  );
+}
