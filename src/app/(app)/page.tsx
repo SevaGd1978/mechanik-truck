@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowUpRight, Plus } from "lucide-react";
-import { activity, kpis, serviceOrders, vehicles } from "@/lib/data";
+import { activity, kpis, serviceOrders } from "@/lib/data";
+import { useFleet } from "@/components/fleet-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { KpiCard } from "@/components/ui/kpi-card";
@@ -16,6 +19,8 @@ const statusMap = {
 };
 
 export default function DashboardPage() {
+  const { vehicles, trailers } = useFleet();
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -26,15 +31,20 @@ export default function DashboardPage() {
           <h2 className="mt-1 text-[22px] font-semibold tracking-tight">
             Автопарк под контролем
           </h2>
+          <p className="mt-1 text-[12px] text-[var(--fg-secondary)]">
+            {vehicles.length} машин · {trailers.length} прицепов
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" size="sm">
             Импорт Excel
           </Button>
-          <Button size="sm">
-            <Plus size={14} />
-            Добавить ТС
-          </Button>
+          <Link href="/fleet">
+            <Button size="sm">
+              <Plus size={14} />
+              Добавить ТС
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -59,9 +69,7 @@ export default function DashboardPage() {
               </Link>
             }
           />
-          <DataTable
-            headers={["ТС", "Водитель", "1 км", "Расход", "Статус"]}
-          >
+          <DataTable headers={["ТС", "Водитель", "1 км", "Расход", "Статус"]}>
             {vehicles.slice(0, 5).map((v) => (
               <Tr key={v.id}>
                 <Td>
