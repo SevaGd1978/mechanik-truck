@@ -406,5 +406,6 @@ export const navItems = [
   { href: "/trips", label: "Поездки", icon: "Route" },
   { href: "/warehouse", label: "Склад", icon: "Package" },
   { href: "/reports", label: "Отчёты", icon: "BarChart3" },
+  { href: "/users", label: "Пользователи", icon: "Users" },
   { href: "/settings", label: "Настройки", icon: "Settings" },
 ] as const;

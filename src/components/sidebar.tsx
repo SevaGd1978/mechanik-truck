@@ -11,8 +11,11 @@ import {
   Route,
   Settings,
   Truck,
+  Users,
   Wrench,
 } from "lucide-react";
+import { useAuth } from "@/components/auth-provider";
+import { canAccessRoute, roleLabels } from "@/lib/auth";
 import { navItems } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +28,7 @@ const icons = {
   Route,
   Package,
   BarChart3,
+  Users,
   Settings,
 };
 
@@ -36,6 +40,11 @@ export function Sidebar({
   onClose: () => void;
 }) {
   const pathname = usePathname();
+  const { currentUser } = useAuth();
+
+  const visibleNav = navItems.filter((item) =>
+    currentUser ? canAccessRoute(currentUser.role, item.href) : false,
+  );
 
   return (
     <>
@@ -72,7 +81,7 @@ export function Sidebar({
           <p className="px-2.5 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--fg-tertiary)]">
             Управление
           </p>
-          {navItems.map((item) => {
+          {visibleNav.map((item) => {
             const Icon = icons[item.icon];
             const active =
               item.href === "/"
@@ -99,13 +108,13 @@ export function Sidebar({
 
         <div className="border-t border-[var(--border)] p-3">
           <div className="rounded-[12px] border border-[var(--border)] bg-[var(--bg-elevated)] p-3 shadow-[var(--shadow-sm)]">
-            <p className="text-[12px] font-semibold">Тариф Оптимальный</p>
-            <p className="mt-0.5 text-[11px] text-[var(--fg-secondary)]">
-              6 ТС · безлимит пользователей
+            <p className="truncate text-[12px] font-semibold">
+              {currentUser?.name ?? "—"}
             </p>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--bg-active)]">
-              <div className="h-full w-[62%] rounded-full bg-[var(--accent)]" />
-            </div>
+            <p className="mt-0.5 text-[11px] text-[var(--fg-secondary)]">
+              {currentUser ? roleLabels[currentUser.role] : ""} · @
+              {currentUser?.login}
+            </p>
           </div>
         </div>
       </aside>

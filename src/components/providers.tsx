@@ -1,12 +1,12 @@
 "use client";
 
-import { ThemeProvider } from "@/components/theme-provider";
+import { AuthGuard } from "@/components/auth-guard";
 import { AppShell } from "@/components/app-shell";
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider>
+    <AuthGuard>
       <AppShell>{children}</AppShell>
-    </ThemeProvider>
+    </AuthGuard>
   );
 }

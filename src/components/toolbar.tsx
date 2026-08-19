@@ -1,8 +1,12 @@
 "use client";
 
-import { Menu, Moon, Search, Sun, Bell } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { LogOut, Menu, Moon, Search, Sun, Bell, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
+import { useAuth } from "@/components/auth-provider";
+import { canManageUsers, roleLabels } from "@/lib/auth";
 
 export function Toolbar({
   title,
@@ -16,6 +20,8 @@ export function Toolbar({
   onSearch: () => void;
 }) {
   const { theme, toggleTheme } = useTheme();
+  const { currentUser, logout } = useAuth();
+  const router = useRouter();
 
   return (
     <header className="sticky top-0 z-20 flex h-[var(--toolbar-h)] items-center gap-3 border-b border-[var(--border)] bg-[var(--bg-window)]/80 px-3 backdrop-blur-xl md:px-5">
@@ -78,7 +84,37 @@ export function Toolbar({
         {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
       </button>
 
-      <Button size="sm">Добавить</Button>
+      {currentUser && canManageUsers(currentUser.role) ? (
+        <Link href="/users">
+          <Button size="sm" variant="secondary">
+            <Users size={14} />
+            Пользователи
+          </Button>
+        </Link>
+      ) : null}
+
+      <div className="hidden items-center gap-2 rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] px-2.5 py-1 sm:flex">
+        <div className="min-w-0">
+          <p className="truncate text-[12px] font-medium leading-tight">
+            {currentUser?.name}
+          </p>
+          <p className="truncate text-[10px] text-[var(--fg-tertiary)]">
+            {currentUser ? roleLabels[currentUser.role] : ""}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            logout();
+            router.replace("/login");
+          }}
+          className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--danger)]"
+          aria-label="Выйти"
+          title="Выйти"
+        >
+          <LogOut size={14} />
+        </button>
+      </div>
     </header>
   );
 }

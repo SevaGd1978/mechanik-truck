@@ -3,11 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
+import { useAuth } from "@/components/auth-provider";
+import { canAccessRoute } from "@/lib/auth";
 import { navItems, vehicles } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
 export function CommandPalette({ onClose }: { onClose: () => void }) {
   const router = useRouter();
+  const { currentUser } = useAuth();
   const [query, setQuery] = useState("");
 
   useEffect(() => {
@@ -21,7 +24,11 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     const pages = navItems
-      .filter((item) => item.label.toLowerCase().includes(q) || !q)
+      .filter(
+        (item) =>
+          (!currentUser || canAccessRoute(currentUser.role, item.href)) &&
+          (item.label.toLowerCase().includes(q) || !q),
+      )
       .map((item) => ({
         type: "Страница" as const,
         label: item.label,
@@ -42,7 +49,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
         href: "/fleet",
       }));
     return [...pages, ...fleet];
-  }, [query]);
+  }, [query, currentUser]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 p-4 pt-[12vh] backdrop-blur-[2px]">

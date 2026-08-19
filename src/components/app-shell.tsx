@@ -40,9 +40,13 @@ const titles: Record<string, { title: string; subtitle: string }> = {
     title: "Отчёты",
     subtitle: "Готовые шаблоны и аналитика",
   },
+  "/users": {
+    title: "Пользователи",
+    subtitle: "Логины, пароли и роли: админ, менеджер, механик",
+  },
   "/settings": {
     title: "Настройки",
-    subtitle: "Организация, пользователи и тариф",
+    subtitle: "Организация и тариф",
   },
 };
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { RootProviders } from "@/components/root-providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -10,7 +11,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ru" suppressHydrationWarning className="h-full">
-      <body className="min-h-full font-sans antialiased">{children}</body>
+      <body className="min-h-full font-sans antialiased">
+        <RootProviders>{children}</RootProviders>
+      </body>
     </html>
   );
 }
