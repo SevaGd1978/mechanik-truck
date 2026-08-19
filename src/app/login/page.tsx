@@ -15,20 +15,44 @@ export default function LoginPage() {
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
-    if (ready && currentUser) router.replace("/");
+    if (ready && currentUser) {
+      router.replace("/");
+    }
   }, [ready, currentUser, router]);
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     setPending(true);
     setError("");
-    const result = login(loginValue, password);
-    setPending(false);
-    if (!result.ok) {
-      setError(result.error);
-      return;
+    try {
+      const result = login(loginValue, password);
+      if (!result.ok) {
+        setError(result.error);
+        setPending(false);
+        return;
+      }
+      // Full reload ensures AuthGuard sees the new session reliably
+      window.location.href = "/";
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка входа");
+      setPending(false);
     }
-    router.replace("/");
+  }
+
+  if (!ready) {
+    return (
+      <div className="flex min-h-full items-center justify-center text-[13px] text-[var(--fg-secondary)]">
+        Загрузка…
+      </div>
+    );
+  }
+
+  if (currentUser) {
+    return (
+      <div className="flex min-h-full items-center justify-center text-[13px] text-[var(--fg-secondary)]">
+        Вход выполнен, открываем приложение…
+      </div>
+    );
   }
 
   return (
@@ -79,48 +103,43 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-5 rounded-[12px] border border-[var(--border)] bg-[var(--bg-elevated)] p-3">
+          <div className="mt-5 space-y-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--fg-tertiary)]">
-              Демо-аккаунты
+              Быстрый вход
             </p>
-            <ul className="mt-2 space-y-1.5 text-[12px] text-[var(--fg-secondary)]">
-              <li>
+            <div className="grid gap-2">
+              {(
+                [
+                  ["admin", "admin123", "admin"],
+                  ["manager", "manager123", "manager"],
+                  ["mechanic", "mechanic123", "mechanic"],
+                ] as const
+              ).map(([user, pass, role]) => (
                 <button
+                  key={user}
                   type="button"
-                  className="hover:text-[var(--accent)]"
+                  className="flex items-center justify-between rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-left text-[12px] transition hover:border-[var(--accent)] hover:bg-[var(--bg-hover)]"
                   onClick={() => {
-                    setLoginValue("admin");
-                    setPassword("admin123");
+                    setLoginValue(user);
+                    setPassword(pass);
+                    setError("");
+                    const result = login(user, pass);
+                    if (!result.ok) {
+                      setError(result.error);
+                      return;
+                    }
+                    window.location.href = "/";
                   }}
                 >
-                  admin / admin123 · {roleLabels.admin}
+                  <span className="font-medium text-[var(--fg-primary)]">
+                    {roleLabels[role]}
+                  </span>
+                  <span className="font-mono text-[var(--fg-tertiary)]">
+                    {user} / {pass}
+                  </span>
                 </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  className="hover:text-[var(--accent)]"
-                  onClick={() => {
-                    setLoginValue("manager");
-                    setPassword("manager123");
-                  }}
-                >
-                  manager / manager123 · {roleLabels.manager}
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  className="hover:text-[var(--accent)]"
-                  onClick={() => {
-                    setLoginValue("mechanic");
-                    setPassword("mechanic123");
-                  }}
-                >
-                  mechanic / mechanic123 · {roleLabels.mechanic}
-                </button>
-              </li>
-            </ul>
+              ))}
+            </div>
           </div>
         </div>
       </div>

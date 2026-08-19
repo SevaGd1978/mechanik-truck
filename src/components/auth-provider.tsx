@@ -4,8 +4,9 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
-  useSyncExternalStore,
+  useState,
 } from "react";
 import {
   AppUser,
@@ -20,7 +21,10 @@ type AuthContextValue = {
   users: AppUser[];
   currentUser: AppUser | null;
   ready: boolean;
-  login: (login: string, password: string) => { ok: true } | { ok: false; error: string };
+  login: (
+    login: string,
+    password: string,
+  ) => { ok: true } | { ok: false; error: string };
   logout: () => void;
   addUser: (input: {
     login: string;
@@ -37,91 +41,75 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const listeners = new Set<() => void>();
-
-function emit() {
-  listeners.forEach((l) => l());
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-function readUsers(): AppUser[] {
+function loadUsers(): AppUser[] {
   try {
     const raw = window.localStorage.getItem(USERS_STORAGE_KEY);
     if (!raw) {
-      window.localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
-      return DEFAULT_USERS;
+      window.localStorage.setItem(
+        USERS_STORAGE_KEY,
+        JSON.stringify(DEFAULT_USERS),
+      );
+      return [...DEFAULT_USERS];
     }
     const parsed = JSON.parse(raw) as AppUser[];
     if (!Array.isArray(parsed) || parsed.length === 0) {
-      window.localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
-      return DEFAULT_USERS;
+      window.localStorage.setItem(
+        USERS_STORAGE_KEY,
+        JSON.stringify(DEFAULT_USERS),
+      );
+      return [...DEFAULT_USERS];
     }
     return parsed;
   } catch {
-    return DEFAULT_USERS;
+    return [...DEFAULT_USERS];
   }
 }
 
-function writeUsers(users: AppUser[]) {
+function persistUsers(users: AppUser[]) {
   window.localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-  emit();
-}
-
-function readSessionId(): string | null {
-  try {
-    return window.localStorage.getItem(SESSION_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function writeSessionId(id: string | null) {
-  if (id) window.localStorage.setItem(SESSION_STORAGE_KEY, id);
-  else window.localStorage.removeItem(SESSION_STORAGE_KEY);
-  emit();
-}
-
-type Snapshot = { users: AppUser[]; sessionId: string | null; ready: boolean };
-
-function getSnapshot(): Snapshot {
-  return {
-    users: readUsers(),
-    sessionId: readSessionId(),
-    ready: true,
-  };
-}
-
-function getServerSnapshot(): Snapshot {
-  return { users: DEFAULT_USERS, sessionId: null, ready: false };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const [users, setUsers] = useState<AppUser[]>(DEFAULT_USERS);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    // Hydrate from localStorage after mount (client-only store).
+    queueMicrotask(() => {
+      setUsers(loadUsers());
+      setSessionId(window.localStorage.getItem(SESSION_STORAGE_KEY));
+      setReady(true);
+    });
+  }, []);
 
   const currentUser = useMemo(() => {
-    if (!snapshot.sessionId) return null;
-    return snapshot.users.find((u) => u.id === snapshot.sessionId && u.active) ?? null;
-  }, [snapshot.sessionId, snapshot.users]);
+    if (!sessionId) return null;
+    return users.find((u) => u.id === sessionId && u.active) ?? null;
+  }, [sessionId, users]);
 
   const login = useCallback((loginName: string, password: string) => {
-    const users = readUsers();
-    const found = users.find(
+    const list = loadUsers();
+    setUsers(list);
+    const found = list.find(
       (u) =>
         u.login.toLowerCase() === loginName.trim().toLowerCase() &&
         u.password === password,
     );
-    if (!found) return { ok: false as const, error: "Неверный логин или пароль" };
-    if (!found.active) return { ok: false as const, error: "Пользователь отключён" };
-    writeSessionId(found.id);
+    if (!found) {
+      return { ok: false as const, error: "Неверный логин или пароль" };
+    }
+    if (!found.active) {
+      return { ok: false as const, error: "Пользователь отключён" };
+    }
+    window.localStorage.setItem(SESSION_STORAGE_KEY, found.id);
+    setSessionId(found.id);
     return { ok: true as const };
   }, []);
 
   const logout = useCallback(() => {
-    writeSessionId(null);
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    setSessionId(null);
   }, []);
 
   const addUser = useCallback(
@@ -131,32 +119,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       name: string;
       role: UserRole;
     }) => {
-      const actor = currentUser;
-      if (!actor) return { ok: false as const, error: "Нет сессии" };
-      if (!canAssignRole(actor.role, input.role)) {
+      if (!currentUser) return { ok: false as const, error: "Нет сессии" };
+      if (!canAssignRole(currentUser.role, input.role)) {
         return { ok: false as const, error: "Недостаточно прав для этой роли" };
       }
-      const login = input.login.trim().toLowerCase();
-      if (!login || !input.password || !input.name.trim()) {
+      const normalizedLogin = input.login.trim().toLowerCase();
+      if (!normalizedLogin || !input.password || !input.name.trim()) {
         return { ok: false as const, error: "Заполните все поля" };
       }
       if (input.password.length < 4) {
         return { ok: false as const, error: "Пароль минимум 4 символа" };
       }
-      const users = readUsers();
-      if (users.some((u) => u.login.toLowerCase() === login)) {
+      const list = loadUsers();
+      if (list.some((u) => u.login.toLowerCase() === normalizedLogin)) {
         return { ok: false as const, error: "Такой логин уже существует" };
       }
       const user: AppUser = {
         id: `u-${Date.now()}`,
-        login,
+        login: normalizedLogin,
         password: input.password,
         name: input.name.trim(),
         role: input.role,
         active: true,
         createdAt: new Date().toISOString().slice(0, 10),
       };
-      writeUsers([user, ...users]);
+      const next = [user, ...list];
+      persistUsers(next);
+      setUsers(next);
       return { ok: true as const, user };
     },
     [currentUser],
@@ -167,32 +156,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       id: string,
       patch: Partial<Pick<AppUser, "name" | "password" | "role" | "active">>,
     ) => {
-      const actor = currentUser;
-      if (!actor) return { ok: false as const, error: "Нет сессии" };
-      const users = readUsers();
-      const target = users.find((u) => u.id === id);
+      if (!currentUser) return { ok: false as const, error: "Нет сессии" };
+      const list = loadUsers();
+      const target = list.find((u) => u.id === id);
       if (!target) return { ok: false as const, error: "Пользователь не найден" };
-      if (patch.role && !canAssignRole(actor.role, patch.role)) {
+      if (patch.role && !canAssignRole(currentUser.role, patch.role)) {
         return { ok: false as const, error: "Недостаточно прав для этой роли" };
       }
-      if (actor.role === "manager" && target.role === "admin") {
+      if (currentUser.role === "manager" && target.role === "admin") {
         return { ok: false as const, error: "Нельзя изменять администратора" };
       }
-      if (id === actor.id && patch.active === false) {
+      if (id === currentUser.id && patch.active === false) {
         return { ok: false as const, error: "Нельзя отключить себя" };
       }
-      writeUsers(
-        users.map((u) =>
-          u.id === id
-            ? {
-                ...u,
-                ...patch,
-                password: patch.password?.trim() ? patch.password : u.password,
-                name: patch.name?.trim() ? patch.name.trim() : u.name,
-              }
-            : u,
-        ),
+      const next = list.map((u) =>
+        u.id === id
+          ? {
+              ...u,
+              ...patch,
+              password: patch.password?.trim() ? patch.password : u.password,
+              name: patch.name?.trim() ? patch.name.trim() : u.name,
+            }
+          : u,
       );
+      persistUsers(next);
+      setUsers(next);
       return { ok: true as const };
     },
     [currentUser],
@@ -200,21 +188,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const deleteUser = useCallback(
     (id: string) => {
-      const actor = currentUser;
-      if (!actor) return { ok: false as const, error: "Нет сессии" };
-      if (id === actor.id) {
+      if (!currentUser) return { ok: false as const, error: "Нет сессии" };
+      if (id === currentUser.id) {
         return { ok: false as const, error: "Нельзя удалить себя" };
       }
-      const users = readUsers();
-      const target = users.find((u) => u.id === id);
+      const list = loadUsers();
+      const target = list.find((u) => u.id === id);
       if (!target) return { ok: false as const, error: "Пользователь не найден" };
-      if (actor.role === "manager" && target.role === "admin") {
+      if (currentUser.role === "manager" && target.role === "admin") {
         return { ok: false as const, error: "Нельзя удалить администратора" };
       }
-      if (actor.role !== "admin" && actor.role !== "manager") {
+      if (currentUser.role !== "admin" && currentUser.role !== "manager") {
         return { ok: false as const, error: "Недостаточно прав" };
       }
-      writeUsers(users.filter((u) => u.id !== id));
+      const next = list.filter((u) => u.id !== id);
+      persistUsers(next);
+      setUsers(next);
       return { ok: true as const };
     },
     [currentUser],
@@ -222,25 +211,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(
     () => ({
-      users: snapshot.users,
+      users,
       currentUser,
-      ready: snapshot.ready,
+      ready,
       login,
       logout,
       addUser,
       updateUser,
       deleteUser,
     }),
-    [
-      snapshot.users,
-      snapshot.ready,
-      currentUser,
-      login,
-      logout,
-      addUser,
-      updateUser,
-      deleteUser,
-    ],
+    [users, currentUser, ready, login, logout, addUser, updateUser, deleteUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
