@@ -42,6 +42,22 @@ npm run dev
 
 Страница входа: [/login](http://localhost:3000/login).
 
+## Деплой на Amvera
+
+В репозитории уже есть `Dockerfile` и `amvera.yaml` (порт 3000).
+
+1. Зарегистрируйтесь на [amvera.ru](https://amvera.ru)
+2. Создайте проект → подключите этот GitHub-репозиторий / ветку `cursor/macos-fms-app-ea6d`
+3. Тип окружения: **Docker** (подхватит `Dockerfile` + `amvera.yaml`)
+4. Запустите сборку — после успеха откроется URL вида `*.amvera.io`
+
+Локальная проверка образа:
+
+```bash
+docker build -t mechanik-truck .
+docker run --rm -p 3000:3000 mechanik-truck
+```
+
 ## Скрипты
 
 - `npm run dev` — разработка
