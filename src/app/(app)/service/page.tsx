@@ -28,7 +28,8 @@ export default function ServicePage() {
   const { currentUser } = useAuth();
   const { vehicles } = useFleet();
   const { items } = useWarehouse();
-  const { orders, addOrder, updateOrderStatus, deleteOrder } = useService();
+  const { orders, addOrder, addPartsToOrder, updateOrderStatus, deleteOrder } =
+    useService();
   const canEdit = currentUser ? canManageService(currentUser.role) : false;
 
   const [showForm, setShowForm] = useState(false);
@@ -48,6 +49,9 @@ export default function ServicePage() {
   const [partLines, setPartLines] = useState<PartLineDraft[]>([
     { warehouseItemId: "", qty: "1" },
   ]);
+
+  const [issueItemId, setIssueItemId] = useState("");
+  const [issueQty, setIssueQty] = useState("1");
 
   const laborPreview = useMemo(() => {
     const hours = Number(laborHours) || 0;
@@ -266,7 +270,7 @@ export default function ServicePage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-[13px] font-semibold">
-                  Запчасти со склада
+                  Списание номенклатуры со склада
                 </h3>
                 <Button
                   type="button"
@@ -384,7 +388,7 @@ export default function ServicePage() {
 
             <div className="flex gap-2">
               <Button type="submit" size="sm">
-                Создать и списать со склада
+                Создать заказ-наряд и списать номенклатуру
               </Button>
               <Button
                 type="button"
@@ -442,13 +446,15 @@ export default function ServicePage() {
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() =>
+                      onClick={() => {
                         setExpandedId((id) =>
                           id === order.id ? null : order.id,
-                        )
-                      }
+                        );
+                        setIssueItemId("");
+                        setIssueQty("1");
+                      }}
                     >
-                      {expandedId === order.id ? "Скрыть" : "Состав"}
+                      {expandedId === order.id ? "Скрыть" : "Списать / состав"}
                     </Button>
                     {canEdit ? (
                       <>
@@ -538,6 +544,67 @@ export default function ServicePage() {
               </p>
             </div>
           </div>
+
+          {canEdit && expanded.status !== "done" ? (
+            <form
+              className="mx-4 mb-4 grid gap-3 rounded-[14px] border border-[var(--border)] bg-[var(--bg-window)] p-4 md:grid-cols-[1.4fr_0.5fr_auto]"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const result = addPartsToOrder(expanded.id, [
+                  {
+                    warehouseItemId: issueItemId,
+                    qty: Number(issueQty) || 0,
+                  },
+                ]);
+                if (!result.ok) {
+                  setMessage({ type: "err", text: result.error });
+                  return;
+                }
+                setMessage({
+                  type: "ok",
+                  text: `Номенклатура списана в ${result.order.number}. Остаток на складе обновлён.`,
+                });
+                setIssueItemId("");
+                setIssueQty("1");
+              }}
+            >
+              <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
+                Списать номенклатуру со склада
+                <select
+                  className={inputClass}
+                  value={issueItemId}
+                  onChange={(e) => setIssueItemId(e.target.value)}
+                  required
+                >
+                  <option value="">Выберите позицию</option>
+                  {availableParts.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name} · {item.sku} · {formatCurrency(item.price)} /
+                      {item.unit} (ост. {item.qty})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
+                Количество
+                <input
+                  className={inputClass}
+                  type="number"
+                  min={0.1}
+                  step={0.1}
+                  value={issueQty}
+                  onChange={(e) => setIssueQty(e.target.value)}
+                  required
+                />
+              </label>
+              <div className="flex items-end">
+                <Button type="submit" size="sm" className="w-full md:w-auto">
+                  Списать в заказ-наряд
+                </Button>
+              </div>
+            </form>
+          ) : null}
+
           {expanded.parts.length > 0 ? (
             <DataTable
               headers={["Запчасть", "Артикул", "Кол-во", "Цена", "Сумма"]}
@@ -558,7 +625,8 @@ export default function ServicePage() {
             </DataTable>
           ) : (
             <p className="px-4 pb-4 text-[13px] text-[var(--fg-secondary)]">
-              В этом заказ-наряде нет запчастей со склада.
+              В этом заказ-наряде ещё нет списанной номенклатуры. Добавьте
+              позицию выше.
             </p>
           )}
         </Panel>
