@@ -15,6 +15,21 @@ import {
   WAREHOUSE_STORAGE_KEY,
 } from "@/lib/warehouse";
 
+export type StockIssueLine = {
+  warehouseItemId: string;
+  qty: number;
+};
+
+export type IssuedPart = {
+  warehouseItemId: string;
+  name: string;
+  sku: string;
+  qty: number;
+  unit: string;
+  price: number;
+  sum: number;
+};
+
 type WarehouseContextValue = {
   items: WarehouseItem[];
   ready: boolean;
@@ -26,6 +41,9 @@ type WarehouseContextValue = {
     patch: Partial<WarehouseItem>,
   ) => { ok: true } | { ok: false; error: string };
   deleteItem: (id: string) => { ok: true } | { ok: false; error: string };
+  issueParts: (
+    lines: StockIssueLine[],
+  ) => { ok: true; parts: IssuedPart[] } | { ok: false; error: string };
 };
 
 const WarehouseContext = createContext<WarehouseContextValue | null>(null);
@@ -125,9 +143,49 @@ export function WarehouseProvider({ children }: { children: React.ReactNode }) {
     return { ok: true as const };
   }, []);
 
+  const issueParts = useCallback((lines: StockIssueLine[]) => {
+    if (!lines.length) {
+      return { ok: true as const, parts: [] as IssuedPart[] };
+    }
+    const list = loadItems();
+    const issued: IssuedPart[] = [];
+    const next = list.map((item) => ({ ...item }));
+
+    for (const line of lines) {
+      if (!(line.qty > 0)) {
+        return { ok: false as const, error: "Количество запчасти должно быть больше 0" };
+      }
+      const idx = next.findIndex((i) => i.id === line.warehouseItemId);
+      if (idx < 0) {
+        return { ok: false as const, error: "Запчасть не найдена на складе" };
+      }
+      const item = next[idx];
+      if (item.qty < line.qty) {
+        return {
+          ok: false as const,
+          error: `Недостаточно «${item.name}» на складе (есть ${item.qty} ${item.unit})`,
+        };
+      }
+      item.qty -= line.qty;
+      issued.push({
+        warehouseItemId: item.id,
+        name: item.name,
+        sku: item.sku,
+        qty: line.qty,
+        unit: item.unit,
+        price: item.price,
+        sum: Math.round(item.price * line.qty * 100) / 100,
+      });
+    }
+
+    saveItems(next);
+    setItems(next);
+    return { ok: true as const, parts: issued };
+  }, []);
+
   const value = useMemo(
-    () => ({ items, ready, addItem, updateItem, deleteItem }),
-    [items, ready, addItem, updateItem, deleteItem],
+    () => ({ items, ready, addItem, updateItem, deleteItem, issueParts }),
+    [items, ready, addItem, updateItem, deleteItem, issueParts],
   );
 
   return (
