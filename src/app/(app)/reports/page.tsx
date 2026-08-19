@@ -5,6 +5,7 @@ import { FileBarChart2, FileSpreadsheet, FileText } from "lucide-react";
 import { useFleet } from "@/components/fleet-provider";
 import { useService } from "@/components/service-provider";
 import { useWarehouse } from "@/components/warehouse-provider";
+import { useTires } from "@/components/tires-provider";
 import { Button } from "@/components/ui/button";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { DataTable, Td, Tr } from "@/components/ui/data-table";
@@ -38,6 +39,7 @@ export default function ReportsPage() {
   const { vehicles, trailers } = useFleet();
   const { orders } = useService();
   const { items } = useWarehouse();
+  const { tires } = useTires();
   const [activeId, setActiveId] = useState<ReportId>("service");
   const [busy, setBusy] = useState<"xlsx" | "pdf" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,8 +51,9 @@ export default function ReportsPage() {
         trailers,
         orders,
         items,
+        tires,
       }),
-    [activeId, vehicles, trailers, orders, items],
+    [activeId, vehicles, trailers, orders, items, tires],
   );
 
   async function onExport(kind: "xlsx" | "pdf") {

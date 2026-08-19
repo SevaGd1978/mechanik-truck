@@ -248,6 +248,7 @@ export const navItems = [
   { href: "/", label: "Обзор", icon: "LayoutDashboard" },
   { href: "/fleet", label: "Автопарк", icon: "Truck" },
   { href: "/service", label: "Сервис", icon: "Wrench" },
+  { href: "/tires", label: "Шины", icon: "CircleDot" },
   { href: "/warehouse", label: "Склад", icon: "Package" },
   { href: "/reports", label: "Отчёты", icon: "BarChart3" },
   { href: "/users", label: "Пользователи", icon: "Users" },

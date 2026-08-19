@@ -2,11 +2,17 @@ import type { Vehicle, VehicleStatus } from "@/lib/data";
 import type { Trailer, TrailerStatus } from "@/lib/fleet";
 import type { WorkOrder, WorkOrderStatus } from "@/lib/service";
 import type { WarehouseItem } from "@/lib/warehouse";
+import {
+  Tire,
+  tireSeasonLabels,
+  tireStatusLabels,
+} from "@/lib/tires";
 
 export type ReportId =
   | "fleet"
   | "service"
   | "warehouse"
+  | "tires"
   | "parts-writeoff"
   | "summary";
 
@@ -97,6 +103,20 @@ export const REPORT_DEFINITIONS: ReportDefinition[] = [
       { key: "price", label: "Цена, ₽", align: "right" },
       { key: "sum", label: "Сумма, ₽", align: "right" },
       { key: "stock", label: "Запас" },
+    ],
+  },
+  {
+    id: "tires",
+    title: "Шины",
+    description: "Номера, марки, склад и установка на ТС / прицепы",
+    columns: [
+      { key: "serial", label: "Номер" },
+      { key: "brand", label: "Марка" },
+      { key: "size", label: "Размер" },
+      { key: "season", label: "Сезон" },
+      { key: "status", label: "Статус" },
+      { key: "location", label: "Где" },
+      { key: "price", label: "Цена, ₽", align: "right" },
     ],
   },
   {
@@ -229,6 +249,42 @@ export function buildWarehouseReport(items: WarehouseItem[]): BuiltReport {
   };
 }
 
+export function buildTiresReport(tires: Tire[]): BuiltReport {
+  const def = REPORT_DEFINITIONS.find((r) => r.id === "tires")!;
+  const rows: ReportRow[] = tires.map((t) => ({
+    serial: t.serial,
+    brand: t.brand,
+    size: t.size,
+    season: tireSeasonLabels[t.season],
+    status: tireStatusLabels[t.status],
+    location: t.mountedOn
+      ? `${t.mountedOn.kind === "vehicle" ? "ТС" : "Прицеп"} ${t.mountedOn.plate}`
+      : t.status === "warehouse"
+        ? "Склад"
+        : "—",
+    price: t.price,
+  }));
+  return {
+    id: "tires",
+    title: def.title,
+    description: def.description,
+    generatedAt: nowLabel(),
+    columns: def.columns,
+    rows,
+    totals: [
+      { label: "Всего", value: String(tires.length) },
+      {
+        label: "На складе",
+        value: String(tires.filter((t) => t.status === "warehouse").length),
+      },
+      {
+        label: "На технике",
+        value: String(tires.filter((t) => t.status === "mounted").length),
+      },
+    ],
+  };
+}
+
 export function buildPartsWriteoffReport(orders: WorkOrder[]): BuiltReport {
   const def = REPORT_DEFINITIONS.find((r) => r.id === "parts-writeoff")!;
   const rows: ReportRow[] = [];
@@ -266,6 +322,7 @@ export function buildSummaryReport(
   trailers: Trailer[],
   orders: WorkOrder[],
   items: WarehouseItem[],
+  tires: Tire[] = [],
 ): BuiltReport {
   const def = REPORT_DEFINITIONS.find((r) => r.id === "summary")!;
   const openOrders = orders.filter((o) => o.status !== "done");
@@ -282,6 +339,11 @@ export function buildSummaryReport(
   const rows: ReportRow[] = [
     { metric: "ТС в автопарке", value: vehicles.length, note: "" },
     { metric: "Прицепы", value: trailers.length, note: "" },
+    {
+      metric: "Шины в учёте",
+      value: tires.length,
+      note: `склад: ${tires.filter((t) => t.status === "warehouse").length}, на технике: ${tires.filter((t) => t.status === "mounted").length}`,
+    },
     {
       metric: "Средняя стоимость 1 км",
       value: `${avgCostPerKm.toFixed(1)} ₽`,
@@ -331,6 +393,7 @@ export function buildReport(
     trailers: Trailer[];
     orders: WorkOrder[];
     items: WarehouseItem[];
+    tires?: Tire[];
   },
 ): BuiltReport {
   switch (id) {
@@ -340,6 +403,8 @@ export function buildReport(
       return buildServiceReport(data.orders);
     case "warehouse":
       return buildWarehouseReport(data.items);
+    case "tires":
+      return buildTiresReport(data.tires ?? []);
     case "parts-writeoff":
       return buildPartsWriteoffReport(data.orders);
     case "summary":
@@ -348,6 +413,7 @@ export function buildReport(
         data.trailers,
         data.orders,
         data.items,
+        data.tires ?? [],
       );
   }
 }

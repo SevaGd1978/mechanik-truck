@@ -69,6 +69,15 @@ export const DEFAULT_WAREHOUSE_ITEMS: WarehouseItem[] = [
     min: 2,
     price: 15200,
   },
+  {
+    id: "w-tire-1",
+    name: "Шина Michelin 315/70 R22.5 · DOT-4819-A1",
+    sku: "TIRE-DOT-4819-A1",
+    qty: 1,
+    unit: "шт",
+    min: 0,
+    price: 28500,
+  },
 ];
 
 export function canManageWarehouse(role: string) {

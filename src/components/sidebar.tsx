@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  CircleDot,
   LayoutDashboard,
   Package,
   Settings,
@@ -20,6 +21,7 @@ const icons = {
   LayoutDashboard,
   Truck,
   Wrench,
+  CircleDot,
   Package,
   BarChart3,
   Users,
