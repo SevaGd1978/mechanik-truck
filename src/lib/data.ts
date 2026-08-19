@@ -14,16 +14,6 @@ export type Vehicle = {
   status: VehicleStatus;
 };
 
-export type FuelEvent = {
-  id: string;
-  vehicle: string;
-  date: string;
-  liters: number;
-  amount: number;
-  station: string;
-  anomaly?: boolean;
-};
-
 export type ServiceOrder = {
   id: string;
   vehicle: string;
@@ -31,15 +21,6 @@ export type ServiceOrder = {
   due: string;
   status: "open" | "in_progress" | "done" | "overdue";
   cost: number;
-};
-
-export type Inspection = {
-  id: string;
-  vehicle: string;
-  date: string;
-  inspector: string;
-  result: "ok" | "issues";
-  notes: string;
 };
 
 export type Trip = {
@@ -69,10 +50,10 @@ export const kpis = [
     tone: "danger" as const,
   },
   {
-    id: "fuel",
-    label: "Аномалии топлива",
-    value: "5",
-    delta: "за последние 7 дней",
+    id: "orders",
+    label: "Заказ-наряды",
+    value: "7",
+    delta: "4 в работе",
     tone: "warning" as const,
   },
   {
@@ -165,51 +146,6 @@ export const vehicles: Vehicle[] = [
   },
 ];
 
-export const fuelEvents: FuelEvent[] = [
-  {
-    id: "f1",
-    vehicle: "К450МН 50",
-    date: "19.08.2026 09:14",
-    liters: 420,
-    amount: 23100,
-    station: "Лукойл №214",
-    anomaly: true,
-  },
-  {
-    id: "f2",
-    vehicle: "А123ВС 77",
-    date: "18.08.2026 18:40",
-    liters: 280,
-    amount: 15400,
-    station: "Роснефть МКАД",
-  },
-  {
-    id: "f3",
-    vehicle: "Т015ХХ 77",
-    date: "18.08.2026 12:05",
-    liters: 48,
-    amount: 2640,
-    station: "Газпромнефть",
-    anomaly: true,
-  },
-  {
-    id: "f4",
-    vehicle: "Е901ОР 777",
-    date: "17.08.2026 21:20",
-    liters: 55,
-    amount: 3025,
-    station: "Shell",
-  },
-  {
-    id: "f5",
-    vehicle: "Н220КУ 16",
-    date: "17.08.2026 08:55",
-    liters: 350,
-    amount: 19250,
-    station: "Татнефть",
-  },
-];
-
 export const serviceOrders: ServiceOrder[] = [
   {
     id: "s1",
@@ -250,41 +186,6 @@ export const serviceOrders: ServiceOrder[] = [
     due: "12.08.2026",
     status: "done",
     cost: 18700,
-  },
-];
-
-export const inspections: Inspection[] = [
-  {
-    id: "i1",
-    vehicle: "А123ВС 77",
-    date: "19.08.2026",
-    inspector: "Механик Орлов",
-    result: "ok",
-    notes: "Замечаний нет",
-  },
-  {
-    id: "i2",
-    vehicle: "К450МН 50",
-    date: "19.08.2026",
-    inspector: "Механик Орлов",
-    result: "issues",
-    notes: "Утечка масла, повышенный люфт руля",
-  },
-  {
-    id: "i3",
-    vehicle: "Е901ОР 777",
-    date: "18.08.2026",
-    inspector: "Козлова М.",
-    result: "ok",
-    notes: "Шины в норме",
-  },
-  {
-    id: "i4",
-    vehicle: "Т015ХХ 77",
-    date: "18.08.2026",
-    inspector: "Никитин В.",
-    result: "issues",
-    notes: "Трещина лобового стекла",
   },
 ];
 
@@ -342,7 +243,7 @@ export const warehouseItems = [
 export const reports = [
   {
     id: "r1",
-    title: "Пробег и расход топлива",
+    title: "Пробег ТС",
     description: "Сводка по ТС за выбранный период",
     updated: "сегодня",
   },
@@ -360,8 +261,8 @@ export const reports = [
   },
   {
     id: "r4",
-    title: "Аномалии топлива",
-    description: "Недоливы, перерасход, сомнительные заправки",
+    title: "Заказ-наряды и склад",
+    description: "Работы, нормо-часы и списанные запчасти",
     updated: "сегодня",
   },
 ];
@@ -369,15 +270,15 @@ export const reports = [
 export const activity = [
   {
     id: "a1",
-    title: "Аномалия заправки",
-    detail: "Volvo FH · +48 л сверх нормы бака",
+    title: "Заказ-наряд создан",
+    detail: "ЗН-1004 · КамАЗ 5490 · замена колодок",
     time: "9 мин назад",
-    tone: "warning" as const,
+    tone: "accent" as const,
   },
   {
     id: "a2",
-    title: "Осмотр завершён",
-    detail: "КамАЗ 5490 · без замечаний",
+    title: "Списание со склада",
+    detail: "Фильтр масляный · 2 шт",
     time: "24 мин назад",
     tone: "success" as const,
   },
@@ -393,16 +294,14 @@ export const activity = [
     title: "Путевой лист открыт",
     detail: "Москва → Казань · Иванов П.",
     time: "2 ч назад",
-    tone: "accent" as const,
+    tone: "warning" as const,
   },
 ];
 
 export const navItems = [
   { href: "/", label: "Обзор", icon: "LayoutDashboard" },
   { href: "/fleet", label: "Автопарк", icon: "Truck" },
-  { href: "/fuel", label: "Топливо", icon: "Fuel" },
   { href: "/service", label: "Сервис", icon: "Wrench" },
-  { href: "/inspections", label: "Осмотры", icon: "ClipboardCheck" },
   { href: "/trips", label: "Поездки", icon: "Route" },
   { href: "/warehouse", label: "Склад", icon: "Package" },
   { href: "/reports", label: "Отчёты", icon: "BarChart3" },

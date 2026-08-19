@@ -19,7 +19,7 @@ export const roleLabels: Record<UserRole, string> = {
 export const roleDescriptions: Record<UserRole, string> = {
   admin: "Полный доступ, управление пользователями и настройками",
   manager: "Управление автопарком, отчёты и создание сотрудников",
-  mechanic: "Сервис, осмотры и склад",
+  mechanic: "Сервис, заказ-наряды и склад",
 };
 
 export const DEFAULT_USERS: AppUser[] = [
@@ -57,9 +57,7 @@ export const roleRoutes: Record<UserRole, string[]> = {
   admin: [
     "/",
     "/fleet",
-    "/fuel",
     "/service",
-    "/inspections",
     "/trips",
     "/warehouse",
     "/reports",
@@ -69,16 +67,14 @@ export const roleRoutes: Record<UserRole, string[]> = {
   manager: [
     "/",
     "/fleet",
-    "/fuel",
     "/service",
-    "/inspections",
     "/trips",
     "/warehouse",
     "/reports",
     "/users",
     "/settings",
   ],
-  mechanic: ["/", "/fleet", "/service", "/inspections", "/warehouse"],
+  mechanic: ["/", "/fleet", "/service", "/warehouse"],
 };
 
 export function canAccessRoute(role: UserRole, pathname: string) {

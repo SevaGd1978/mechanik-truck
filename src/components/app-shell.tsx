@@ -16,17 +16,9 @@ const titles: Record<string, { title: string; subtitle: string }> = {
     title: "Автопарк",
     subtitle: "Машины, прицепы, водители и статусы",
   },
-  "/fuel": {
-    title: "Топливо",
-    subtitle: "Заправки, нормы расхода и аномалии",
-  },
   "/service": {
     title: "Сервис и ТО",
     subtitle: "Заказ-наряды: нормо-часы, ставка и запчасти со склада",
-  },
-  "/inspections": {
-    title: "Осмотры",
-    subtitle: "Ежедневные проверки и замечания",
   },
   "/trips": {
     title: "Поездки",

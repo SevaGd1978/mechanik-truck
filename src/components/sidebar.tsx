@@ -4,8 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
-  ClipboardCheck,
-  Fuel,
   LayoutDashboard,
   Package,
   Route,
@@ -22,9 +20,7 @@ import { cn } from "@/lib/utils";
 const icons = {
   LayoutDashboard,
   Truck,
-  Fuel,
   Wrench,
-  ClipboardCheck,
   Route,
   Package,
   BarChart3,
