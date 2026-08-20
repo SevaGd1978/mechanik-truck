@@ -23,15 +23,23 @@ export function Toolbar({
   const { currentUser, logout } = useAuth();
   const router = useRouter();
 
+  function handleLogout() {
+    logout();
+    router.replace("/login");
+  }
+
   return (
-    <header className="sticky top-0 z-20 flex h-[var(--toolbar-h)] items-center gap-3 border-b border-[var(--border)] bg-[var(--bg-window)]/80 px-3 backdrop-blur-xl md:px-5">
+    <header
+      className="sticky top-0 z-20 flex h-[var(--toolbar-h)] items-center gap-2 border-b border-[var(--border)] bg-[var(--bg-window)]/85 px-3 backdrop-blur-xl md:gap-3 md:px-5"
+      style={{ paddingTop: "env(safe-area-inset-top)" }}
+    >
       <button
         type="button"
         onClick={onMenu}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)] md:hidden"
+        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)] md:hidden"
         aria-label="Открыть меню"
       >
-        <Menu size={18} />
+        <Menu size={20} />
       </button>
 
       <div className="min-w-0 flex-1">
@@ -39,7 +47,7 @@ export function Toolbar({
           {title}
         </h1>
         {subtitle ? (
-          <p className="truncate text-[12px] text-[var(--fg-secondary)]">
+          <p className="hidden truncate text-[12px] text-[var(--fg-secondary)] sm:block">
             {subtitle}
           </p>
         ) : null}
@@ -60,15 +68,15 @@ export function Toolbar({
       <button
         type="button"
         onClick={onSearch}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)] sm:hidden"
+        className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)] sm:hidden"
         aria-label="Поиск"
       >
-        <Search size={16} />
+        <Search size={18} />
       </button>
 
       <button
         type="button"
-        className="relative inline-flex h-8 w-8 items-center justify-center rounded-[8px] text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)]"
+        className="relative hidden h-8 w-8 items-center justify-center rounded-[8px] text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)] sm:inline-flex"
         aria-label="Уведомления"
       >
         <Bell size={16} />
@@ -78,14 +86,14 @@ export function Toolbar({
       <button
         type="button"
         onClick={toggleTheme}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)]"
+        className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)] md:h-8 md:w-8 md:rounded-[8px]"
         aria-label="Переключить тему"
       >
         {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
       </button>
 
       {currentUser && canManageUsers(currentUser.role) ? (
-        <Link href="/users">
+        <Link href="/users" className="hidden lg:inline-flex">
           <Button size="sm" variant="secondary">
             <Users size={14} />
             Пользователи
@@ -104,10 +112,7 @@ export function Toolbar({
         </div>
         <button
           type="button"
-          onClick={() => {
-            logout();
-            router.replace("/login");
-          }}
+          onClick={handleLogout}
           className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--danger)]"
           aria-label="Выйти"
           title="Выйти"
@@ -115,6 +120,15 @@ export function Toolbar({
           <LogOut size={14} />
         </button>
       </div>
+
+      <button
+        type="button"
+        onClick={handleLogout}
+        className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--danger)] sm:hidden"
+        aria-label="Выйти"
+      >
+        <LogOut size={18} />
+      </button>
     </header>
   );
 }

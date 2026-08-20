@@ -56,7 +56,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-full items-center justify-center bg-[var(--bg-app)] p-4">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-[var(--bg-app)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
       <div className="glass w-full max-w-md animate-scale-in overflow-hidden rounded-[20px] border border-[var(--border-strong)] shadow-[var(--shadow-lg)]">
         <div className="flex items-center gap-1.5 border-b border-[var(--border)] px-4 py-3">
           <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />

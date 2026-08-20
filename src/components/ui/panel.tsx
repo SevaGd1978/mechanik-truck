@@ -29,8 +29,8 @@ export function PanelHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 border-b border-[var(--border)] px-4 py-3.5">
-      <div>
+    <div className="flex flex-col gap-3 border-b border-[var(--border)] px-4 py-3.5 sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0">
         <h2 className="text-[15px] font-semibold tracking-tight text-[var(--fg-primary)]">
           {title}
         </h2>
@@ -40,7 +40,11 @@ export function PanelHeader({
           </p>
         ) : null}
       </div>
-      {action}
+      {action ? (
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+          {action}
+        </div>
+      ) : null}
     </div>
   );
 }

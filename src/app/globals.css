@@ -150,6 +150,39 @@ body {
   -webkit-backdrop-filter: saturate(180%) blur(24px);
 }
 
+/* Mobile / touch */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  overscroll-behavior-y: none;
+}
+
+@media (max-width: 767px) {
+  .data-table thead th:first-child,
+  .data-table tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--bg-elevated);
+    box-shadow: 1px 0 0 var(--border);
+  }
+
+  .data-table tbody tr:hover td:first-child {
+    background: var(--bg-elevated);
+  }
+}
+
+@media (pointer: coarse) {
+  button,
+  a,
+  [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
 @media print {
   body * {
     visibility: hidden !important;

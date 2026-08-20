@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/sidebar";
 import { Toolbar } from "@/components/toolbar";
 import { CommandPalette } from "@/components/command-palette";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { navItems } from "@/lib/data";
 
 const titles: Record<string, { title: string; subtitle: string }> = {
@@ -71,6 +72,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [sidebarOpen]);
+
   const meta =
     titles[pathname] ??
     navItems.find((n) => n.href === pathname) ??
@@ -93,7 +103,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           onMenu={() => setSidebarOpen(true)}
           onSearch={() => setPaletteOpen(true)}
         />
-        <main className="animate-fade-in flex-1 p-3 md:p-5">{children}</main>
+        <main className="animate-fade-in flex-1 px-3 pb-[calc(4.75rem+env(safe-area-inset-bottom))] pt-3 md:p-5 md:pb-5">
+          {children}
+        </main>
+        <MobileBottomNav onMore={() => setSidebarOpen(true)} />
       </div>
       {paletteOpen ? (
         <CommandPalette onClose={() => setPaletteOpen(false)} />

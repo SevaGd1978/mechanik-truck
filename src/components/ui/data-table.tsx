@@ -10,22 +10,32 @@ export function DataTable({
   className?: string;
 }) {
   return (
-    <div className={cn("overflow-x-auto", className)}>
-      <table className="w-full min-w-[720px] border-collapse text-left">
-        <thead>
-          <tr className="border-b border-[var(--border)]">
-            {headers.map((header) => (
-              <th
-                key={header}
-                className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--fg-tertiary)]"
-              >
-                {header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>{children}</tbody>
-      </table>
+    <div className={cn("relative", className)}>
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-[1] w-8 bg-gradient-to-l from-[var(--bg-elevated)] to-transparent md:hidden" />
+      <div className="-mx-1 overflow-x-auto overscroll-x-contain px-1 [-webkit-overflow-scrolling:touch]">
+        <table className="data-table w-full min-w-[560px] border-collapse text-left md:min-w-[720px]">
+          <thead>
+            <tr className="border-b border-[var(--border)]">
+              {headers.map((header, index) => (
+                <th
+                  key={header}
+                  className={cn(
+                    "px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--fg-tertiary)] md:px-4",
+                    index === 0 &&
+                      "sticky left-0 z-[1] bg-[var(--bg-elevated)] md:static",
+                  )}
+                >
+                  {header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>{children}</tbody>
+        </table>
+      </div>
+      <p className="px-4 pb-2 pt-1 text-[11px] text-[var(--fg-tertiary)] md:hidden">
+        Листайте таблицу в сторону →
+      </p>
     </div>
   );
 }
@@ -59,7 +69,7 @@ export function Td({
   return (
     <td
       className={cn(
-        "px-4 py-3 text-[13px] text-[var(--fg-primary)]",
+        "px-3 py-3 text-[13px] text-[var(--fg-primary)] md:px-4",
         className,
       )}
     >
