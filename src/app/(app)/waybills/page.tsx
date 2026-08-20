@@ -4,6 +4,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { Printer } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { useFleet } from "@/components/fleet-provider";
+import { useDrivers } from "@/components/drivers-provider";
 import { useWaybills } from "@/components/waybills-provider";
 import { WaybillPrintForm } from "@/components/waybill-print-form";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,7 @@ import {
   waybillStatusLabels,
   waybillStatusTone,
 } from "@/lib/waybills";
+import { driverFullName, formatLicense } from "@/lib/drivers";
 import { formatNumber } from "@/lib/utils";
 
 const inputClass =
@@ -96,6 +98,7 @@ function blankForm(defaults?: {
 export default function WaybillsPage() {
   const { currentUser } = useAuth();
   const { vehicles, trailers } = useFleet();
+  const { drivers } = useDrivers();
   const { waybills, addWaybill, updateWaybill, deleteWaybill } = useWaybills();
   const canEdit = currentUser ? canManageWaybills(currentUser.role) : false;
 
@@ -242,6 +245,29 @@ export default function WaybillsPage() {
       trailerId: t.id,
       trailerPlate: t.plate,
       trailerModel: t.model,
+    }));
+  }
+
+  function onDriverPick(driverId: string) {
+    const d = drivers.find((x) => x.id === driverId);
+    if (!d) return;
+    const v = d.vehicleId
+      ? vehicles.find((x) => x.id === d.vehicleId)
+      : undefined;
+    setForm((prev) => ({
+      ...prev,
+      driverName: driverFullName(d),
+      driverLicense: `${d.licenseSeries} ${d.licenseNumber}`.trim(),
+      driverTabNumber: d.tabNumber || prev.driverTabNumber,
+      ...(v && !prev.vehicleId
+        ? {
+            vehicleId: v.id,
+            vehiclePlate: v.plate,
+            vehicleModel: v.model,
+            fuelNorm: prev.fuelNorm || v.fuelNorm,
+            odometerDeparture: prev.odometerDeparture || v.odometer,
+          }
+        : {}),
     }));
   }
 
@@ -613,6 +639,25 @@ export default function WaybillsPage() {
                       {t.plate} · {t.model}
                     </option>
                   ))}
+                </select>
+              </label>
+              <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
+                Водитель из справочника
+                <select
+                  className={inputClass}
+                  defaultValue=""
+                  onChange={(e) => {
+                    if (e.target.value) onDriverPick(e.target.value);
+                  }}
+                >
+                  <option value="">Выбрать…</option>
+                  {drivers
+                    .filter((d) => d.status === "active")
+                    .map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {driverFullName(d)} · {formatLicense(d)}
+                      </option>
+                    ))}
                 </select>
               </label>
               <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
