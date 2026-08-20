@@ -16,6 +16,10 @@ const titles: Record<string, { title: string; subtitle: string }> = {
     title: "Автопарк",
     subtitle: "Машины, прицепы, водители и статусы",
   },
+  "/waybills": {
+    title: "Путевые листы",
+    subtitle: "Форма № 4-с: учёт, заполнение и печать",
+  },
   "/service": {
     title: "Сервис и ТО",
     subtitle: "Заказ-наряды: нормо-часы, ставка и запчасти со склада",

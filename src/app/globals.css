@@ -149,3 +149,33 @@ body {
   backdrop-filter: saturate(180%) blur(24px);
   -webkit-backdrop-filter: saturate(180%) blur(24px);
 }
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .waybill-print-root,
+  .waybill-print-root * {
+    visibility: visible !important;
+  }
+
+  .waybill-print-root {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    width: 100% !important;
+    background: white !important;
+    color: black !important;
+    z-index: 99999 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+}
+

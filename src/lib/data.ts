@@ -247,6 +247,7 @@ export const activity = [
 export const navItems = [
   { href: "/", label: "Обзор", icon: "LayoutDashboard" },
   { href: "/fleet", label: "Автопарк", icon: "Truck" },
+  { href: "/waybills", label: "Путевые листы", icon: "ClipboardList" },
   { href: "/service", label: "Сервис", icon: "Wrench" },
   { href: "/tires", label: "Шины", icon: "CircleDot" },
   { href: "/warehouse", label: "Склад", icon: "Package" },

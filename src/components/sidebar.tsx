@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   CircleDot,
+  ClipboardList,
   LayoutDashboard,
   Package,
   Settings,
@@ -20,6 +21,7 @@ import { cn } from "@/lib/utils";
 const icons = {
   LayoutDashboard,
   Truck,
+  ClipboardList,
   Wrench,
   CircleDot,
   Package,

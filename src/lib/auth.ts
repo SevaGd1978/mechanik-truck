@@ -57,6 +57,7 @@ export const roleRoutes: Record<UserRole, string[]> = {
   admin: [
     "/",
     "/fleet",
+    "/waybills",
     "/service",
     "/tires",
     "/warehouse",
@@ -67,6 +68,7 @@ export const roleRoutes: Record<UserRole, string[]> = {
   manager: [
     "/",
     "/fleet",
+    "/waybills",
     "/service",
     "/tires",
     "/warehouse",
@@ -74,7 +76,7 @@ export const roleRoutes: Record<UserRole, string[]> = {
     "/users",
     "/settings",
   ],
-  mechanic: ["/", "/fleet", "/service", "/tires", "/warehouse"],
+  mechanic: ["/", "/fleet", "/waybills", "/service", "/tires", "/warehouse"],
 };
 
 export function canAccessRoute(role: UserRole, pathname: string) {
