@@ -61,12 +61,17 @@ export default function ReportsPage() {
     setBusy(kind);
     try {
       if (kind === "xlsx") {
-        downloadExcel(report);
+        await downloadExcel(report);
       } else {
         await downloadPdf(report);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Не удалось выгрузить отчёт");
+      console.error("Report export failed", e);
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Не удалось выгрузить отчёт. Попробуйте другой браузер.",
+      );
     } finally {
       setBusy(null);
     }

@@ -1,20 +1,30 @@
-import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { BuiltReport } from "@/lib/reports";
 
-function safeFileName(title: string) {
-  return title
-    .replace(/[^\p{L}\p{N}\-_ ]+/gu, "")
-    .trim()
-    .replace(/\s+/g, "_")
-    .slice(0, 60);
-}
+const REPORT_FILE_SLUG: Record<string, string> = {
+  fleet: "avtopark",
+  service: "zakaz-naryady",
+  warehouse: "sklad",
+  tires: "shiny",
+  "parts-writeoff": "spisanie-zapchastey",
+  summary: "svodka-zatrat",
+};
 
 function stamp() {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;
+}
+
+function fileBase(report: BuiltReport) {
+  return REPORT_FILE_SLUG[report.id] ?? "otchet";
+}
+
+/** Имя листа Excel: без запрещённых символов, до 31 символа */
+function sheetName(title: string) {
+  const cleaned = title.replace(/[:\\/?*\[\]]/g, "-").trim() || "Отчёт";
+  return cleaned.slice(0, 31);
 }
 
 function arrayBufferToBase64(buf: ArrayBuffer) {
@@ -25,6 +35,22 @@ function arrayBufferToBase64(buf: ArrayBuffer) {
     binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
   }
   return btoa(binary);
+}
+
+function triggerBrowserDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.rel = "noopener";
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  // revoke after click has been processed
+  window.setTimeout(() => {
+    URL.revokeObjectURL(url);
+    a.remove();
+  }, 1500);
 }
 
 let fontCache: Promise<{ regular: string; bold: string }> | null = null;
@@ -45,10 +71,20 @@ function loadFonts() {
   return fontCache;
 }
 
-export function downloadExcel(report: BuiltReport) {
+export async function downloadExcel(report: BuiltReport) {
+  if (typeof window === "undefined") {
+    throw new Error("Выгрузка Excel доступна только в браузере");
+  }
+
+  // динамический импорт — надёжнее для клиентского бандла Next.js
+  const XLSX = await import("xlsx");
+
   const header = report.columns.map((c) => c.label);
   const body = report.rows.map((row) =>
-    report.columns.map((c) => row[c.key] ?? ""),
+    report.columns.map((c) => {
+      const value = row[c.key];
+      return value === null || value === undefined ? "" : value;
+    }),
   );
 
   const sheetData: (string | number)[][] = [
@@ -68,23 +104,45 @@ export function downloadExcel(report: BuiltReport) {
   }
 
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
-  ws["!cols"] = report.columns.map((c) => ({
-    wch: Math.min(
-      40,
-      Math.max(
-        c.label.length + 2,
-        ...report.rows.map((r) => String(r[c.key] ?? "").length + 2),
-        8,
-      ),
-    ),
-  }));
+
+  const colWidths = report.columns.map((c) => {
+    const lengths = [
+      c.label.length + 2,
+      8,
+      ...report.rows.map((r) => String(r[c.key] ?? "").length + 2),
+    ];
+    return { wch: Math.min(40, Math.max(...lengths)) };
+  });
+  ws["!cols"] = colWidths;
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, report.title.slice(0, 31));
-  XLSX.writeFile(wb, `${safeFileName(report.title)}_${stamp()}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, ws, sheetName(report.title));
+
+  const buffer = XLSX.write(wb, {
+    bookType: "xlsx",
+    type: "array",
+    compression: true,
+  }) as ArrayBuffer | Uint8Array;
+
+  const bytes =
+    buffer instanceof ArrayBuffer ? new Uint8Array(buffer) : new Uint8Array(buffer);
+
+  if (!bytes.byteLength) {
+    throw new Error("Не удалось сформировать файл Excel");
+  }
+
+  const blob = new Blob([bytes], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+
+  triggerBrowserDownload(blob, `${fileBase(report)}_${stamp()}.xlsx`);
 }
 
 export async function downloadPdf(report: BuiltReport) {
+  if (typeof window === "undefined") {
+    throw new Error("Выгрузка PDF доступна только в браузере");
+  }
+
   const landscape = report.columns.length > 6;
   const doc = new jsPDF({
     orientation: landscape ? "landscape" : "portrait",
@@ -106,7 +164,10 @@ export async function downloadPdf(report: BuiltReport) {
   doc.setFontSize(9);
   doc.setTextColor(80);
   doc.text(`Mechanik Truck · ${report.generatedAt}`, 14, 22);
-  const descLines = doc.splitTextToSize(report.description, landscape ? 270 : 180);
+  const descLines = doc.splitTextToSize(
+    report.description,
+    landscape ? 270 : 180,
+  );
   doc.text(descLines, 14, 27);
   doc.setTextColor(0);
 
@@ -152,5 +213,5 @@ export async function downloadPdf(report: BuiltReport) {
     }
   }
 
-  doc.save(`${safeFileName(report.title)}_${stamp()}.pdf`);
+  doc.save(`${fileBase(report)}_${stamp()}.pdf`);
 }
