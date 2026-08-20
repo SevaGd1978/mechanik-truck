@@ -6,6 +6,7 @@ import {
   BarChart3,
   CircleDot,
   ClipboardList,
+  IdCard,
   LayoutDashboard,
   Package,
   Settings,
@@ -21,6 +22,7 @@ import { cn } from "@/lib/utils";
 const icons = {
   LayoutDashboard,
   Truck,
+  IdCard,
   ClipboardList,
   Wrench,
   CircleDot,

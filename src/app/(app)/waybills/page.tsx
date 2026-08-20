@@ -157,8 +157,52 @@ export default function WaybillsPage() {
 
   function openEdit(wb: Waybill) {
     setEditingId(wb.id);
-    const { id: _id, formCode: _fc, createdAt: _c, updatedAt: _u, ...rest } = wb;
-    setForm(rest);
+    setForm({
+      series: wb.series,
+      number: wb.number,
+      status: wb.status,
+      date: wb.date,
+      validFrom: wb.validFrom,
+      validTo: wb.validTo,
+      organization: wb.organization,
+      organizationAddress: wb.organizationAddress,
+      organizationPhone: wb.organizationPhone,
+      okpo: wb.okpo,
+      vehicleId: wb.vehicleId,
+      vehiclePlate: wb.vehiclePlate,
+      vehicleModel: wb.vehicleModel,
+      garageNumber: wb.garageNumber,
+      trailerId: wb.trailerId,
+      trailerPlate: wb.trailerPlate,
+      trailerModel: wb.trailerModel,
+      driverName: wb.driverName,
+      driverLicense: wb.driverLicense,
+      driverTabNumber: wb.driverTabNumber,
+      column: wb.column,
+      brigade: wb.brigade,
+      fuelBrand: wb.fuelBrand,
+      fuelIssued: wb.fuelIssued,
+      fuelDeparture: wb.fuelDeparture,
+      fuelReturn: wb.fuelReturn,
+      fuelNorm: wb.fuelNorm,
+      fuelFact: wb.fuelFact,
+      odometerDeparture: wb.odometerDeparture,
+      odometerReturn: wb.odometerReturn,
+      timeDeparture: wb.timeDeparture,
+      timeReturn: wb.timeReturn,
+      dispatcherOut: wb.dispatcherOut,
+      mechanicOut: wb.mechanicOut,
+      medicOut: wb.medicOut,
+      medicOutAt: wb.medicOutAt,
+      techCheckAt: wb.techCheckAt,
+      taskCustomer: wb.taskCustomer,
+      taskAddress: wb.taskAddress,
+      taskCargo: wb.taskCargo,
+      taskDistanceKm: wb.taskDistanceKm,
+      taskTons: wb.taskTons,
+      trips: wb.trips,
+      notes: wb.notes,
+    });
     setShowForm(true);
     setPrintId(null);
     setMessage(null);
