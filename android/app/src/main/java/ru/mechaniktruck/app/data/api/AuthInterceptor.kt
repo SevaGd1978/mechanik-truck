@@ -2,7 +2,6 @@ package ru.mechaniktruck.app.data.api
 
 import okhttp3.Interceptor
 import okhttp3.Response
-import ru.mechaniktruck.app.BuildConfig
 import ru.mechaniktruck.app.data.datastore.PreferencesManager
 
 class AuthInterceptor(
