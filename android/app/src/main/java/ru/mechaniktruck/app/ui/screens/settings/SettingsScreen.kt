@@ -60,17 +60,19 @@ fun SettingsScreen(
                 .padding(padding)
                 .padding(16.dp),
         ) {
-            if (uiState.userName != null && uiState.userLogin != null) {
+            val userName = uiState.userName
+            val userLogin = uiState.userLogin
+            if (userName != null && userLogin != null) {
                 Text(
                     text = stringResource(
                         R.string.user_info,
-                        uiState.userName,
+                        userName,
                         uiState.userRole ?: "",
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
-                    text = uiState.userLogin,
+                    text = userLogin,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
