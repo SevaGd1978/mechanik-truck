@@ -20,7 +20,7 @@ const inputClass =
 export default function WarehousePage() {
   const { currentUser } = useAuth();
   const { items, addItem, updateItem, deleteItem } = useWarehouse();
-  const canEdit = currentUser ? canManageWarehouse(currentUser.role) : false;
+  const canEdit = currentUser ? canManageWarehouse(currentUser) : false;
 
   const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);

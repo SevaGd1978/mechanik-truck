@@ -1,5 +1,3 @@
-import type { UserRole } from "@/lib/auth";
-
 export type TireStatus = "registered" | "warehouse" | "mounted" | "written_off";
 
 export type TireMountTarget = {
@@ -127,9 +125,7 @@ export const DEFAULT_TIRES: Tire[] = [
   },
 ];
 
-export function canManageTires(role: UserRole | string) {
-  return role === "admin" || role === "manager" || role === "mechanic";
-}
+export { canManageTires } from "@/lib/auth";
 
 export function tireWarehouseSku(serial: string) {
   return `TIRE-${serial.trim().toUpperCase().replace(/\s+/g, "-")}`;

@@ -80,6 +80,4 @@ export const DEFAULT_WAREHOUSE_ITEMS: WarehouseItem[] = [
   },
 ];
 
-export function canManageWarehouse(role: string) {
-  return role === "admin" || role === "manager" || role === "mechanic";
-}
+export { canManageWarehouse } from "@/lib/auth";

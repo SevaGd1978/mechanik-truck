@@ -26,7 +26,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     const pages = navItems
       .filter(
         (item) =>
-          (!currentUser || canAccessRoute(currentUser.role, item.href)) &&
+          (!currentUser || canAccessRoute(currentUser, item.href)) &&
           (item.label.toLowerCase().includes(q) || !q),
       )
       .map((item) => ({

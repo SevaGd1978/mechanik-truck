@@ -34,7 +34,7 @@ export default function TiresPage() {
     issueToUnit,
     returnToWarehouse,
   } = useTires();
-  const canEdit = currentUser ? canManageTires(currentUser.role) : false;
+  const canEdit = currentUser ? canManageTires(currentUser) : false;
 
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");

@@ -48,7 +48,7 @@ export function Sidebar({
   const { currentUser, logout } = useAuth();
 
   const visibleNav = navItems.filter((item) =>
-    currentUser ? canAccessRoute(currentUser.role, item.href) : false,
+    currentUser ? canAccessRoute(currentUser, item.href) : false,
   );
 
   return (

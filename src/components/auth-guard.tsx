@@ -16,7 +16,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       router.replace("/login");
       return;
     }
-    if (!canAccessRoute(currentUser.role, pathname)) {
+    if (!canAccessRoute(currentUser, pathname)) {
       router.replace("/");
     }
   }, [ready, currentUser, pathname, router]);
@@ -37,7 +37,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!canAccessRoute(currentUser.role, pathname)) {
+  if (!canAccessRoute(currentUser, pathname)) {
     return (
       <div className="flex min-h-full items-center justify-center text-[13px] text-[var(--fg-secondary)]">
         Нет доступа…
