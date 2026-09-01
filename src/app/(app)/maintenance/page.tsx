@@ -12,9 +12,12 @@ import { DataTable, Td, Tr } from "@/components/ui/data-table";
 import type { Vehicle } from "@/lib/data";
 import { canManageMaintenance } from "@/lib/auth";
 import {
+  defaultNextServiceDate,
+  defaultNextServiceOdometer,
   formatDateRu,
-  getMaintenanceStatus,
+  historyNewestFirst,
   summarizeMaintenance,
+  todayIso,
 } from "@/lib/maintenance";
 import { formatNumber } from "@/lib/utils";
 
@@ -48,18 +51,42 @@ function KmCell({
   );
 }
 
+function fillConductForm(v: Vehicle | undefined) {
+  const date = todayIso();
+  const km = v?.odometer || 0;
+  return {
+    date,
+    km: km ? String(km) : "",
+    note: "",
+    nextDate: defaultNextServiceDate(date),
+    nextKm: String(defaultNextServiceOdometer(km)),
+    nextNote: v?.nextServiceNote || "",
+  };
+}
+
 export default function MaintenancePage() {
   const { currentUser } = useAuth();
-  const { vehicles, updateVehicle } = useFleet();
+  const { vehicles, updateVehicle, recordConductedService } = useFleet();
   const canEdit = currentUser ? canManageMaintenance(currentUser) : false;
 
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<Vehicle | null>(null);
+  const [historyVehicleId, setHistoryVehicleId] = useState<string | null>(null);
   const [message, setMessage] = useState<{
     type: "ok" | "err";
     text: string;
   } | null>(null);
+
+  const [conductId, setConductId] = useState("");
+  const [conductDate, setConductDate] = useState(todayIso());
+  const [conductKm, setConductKm] = useState("");
+  const [conductNote, setConductNote] = useState("");
+  const [conductNextDate, setConductNextDate] = useState(
+    defaultNextServiceDate(todayIso()),
+  );
+  const [conductNextKm, setConductNextKm] = useState("");
+  const [conductNextNote, setConductNextNote] = useState("");
 
   const [lastDate, setLastDate] = useState("");
   const [lastKm, setLastKm] = useState("");
@@ -70,6 +97,8 @@ export default function MaintenancePage() {
   const [odometer, setOdometer] = useState("");
 
   const summary = useMemo(() => summarizeMaintenance(vehicles), [vehicles]);
+  const historyVehicle = vehicles.find((v) => v.id === historyVehicleId) ?? null;
+  const historyRows = historyNewestFirst(historyVehicle?.serviceHistory || []);
 
   const rows = useMemo(() => {
     const q = query.toLowerCase();
@@ -79,16 +108,51 @@ export default function MaintenancePage() {
         (filter === "overdue" && status.key === "overdue") ||
         (filter === "soon" && status.key === "soon") ||
         (filter === "ok" && status.key === "ok");
+      const historyText = (v.serviceHistory || [])
+        .map((r) => `${r.date} ${r.note}`)
+        .join(" ");
       const matchQuery =
         !q ||
         v.plate.toLowerCase().includes(q) ||
         v.model.toLowerCase().includes(q) ||
         v.driver.toLowerCase().includes(q) ||
         v.lastServiceNote.toLowerCase().includes(q) ||
-        v.nextServiceNote.toLowerCase().includes(q);
+        v.nextServiceNote.toLowerCase().includes(q) ||
+        historyText.toLowerCase().includes(q);
       return matchFilter && matchQuery;
     });
   }, [summary.rows, filter, query]);
+
+  function applyVehicleDefaults(v: Vehicle) {
+    const filled = fillConductForm(v);
+    setConductId(v.id);
+    setConductDate(filled.date);
+    setConductKm(filled.km);
+    setConductNote(filled.note);
+    setConductNextDate(filled.nextDate);
+    setConductNextKm(filled.nextKm);
+    setConductNextNote(filled.nextNote);
+    setHistoryVehicleId(v.id);
+  }
+
+  function onSelectConductVehicle(id: string) {
+    const v = vehicles.find((item) => item.id === id);
+    if (!v) {
+      setConductId("");
+      return;
+    }
+    applyVehicleDefaults(v);
+  }
+
+  function onConductDateChange(value: string) {
+    setConductDate(value);
+    setConductNextDate(defaultNextServiceDate(value || todayIso()));
+  }
+
+  function onConductKmChange(value: string) {
+    setConductKm(value);
+    setConductNextKm(String(defaultNextServiceOdometer(Number(value) || 0)));
+  }
 
   function openEdit(v: Vehicle) {
     setEditing(v);
@@ -99,7 +163,43 @@ export default function MaintenancePage() {
     setNextKm(String(v.nextServiceOdometer || ""));
     setNextNote(v.nextServiceNote || "");
     setOdometer(String(v.odometer || "0"));
+    setHistoryVehicleId(v.id);
     setMessage(null);
+  }
+
+  function onConduct(e: FormEvent) {
+    e.preventDefault();
+    if (!conductId) {
+      setMessage({ type: "err", text: "Выберите машину" });
+      return;
+    }
+    if (!conductDate) {
+      setMessage({ type: "err", text: "Укажите дату проведения ТО" });
+      return;
+    }
+    const plate = vehicles.find((v) => v.id === conductId)?.plate || "";
+    const res = recordConductedService(conductId, {
+      date: conductDate,
+      odometer: Number(conductKm) || 0,
+      note: conductNote,
+      nextDate: conductNextDate,
+      nextOdometer: Number(conductNextKm) || 0,
+      nextNote: conductNextNote,
+    });
+    if (!res.ok) {
+      setMessage({ type: "err", text: res.error });
+      return;
+    }
+    setMessage({
+      type: "ok",
+      text: `ТО ${plate} проведено ${formatDateRu(conductDate)}`,
+    });
+    setConductNote("");
+    setHistoryVehicleId(conductId);
+    const v = vehicles.find((item) => item.id === conductId);
+    if (v) {
+      setConductNextDate(defaultNextServiceDate(conductDate));
+    }
   }
 
   function onSave(e: FormEvent) {
@@ -129,7 +229,8 @@ export default function MaintenancePage() {
           Техническое обслуживание
         </h2>
         <p className="mt-1 text-[12px] text-[var(--fg-secondary)]">
-          Прошедшее и плановое ТО по дате и пробегу каждой машины
+          Вносите дату проведения ТО, пробег и работы — они попадут в журнал
+          машины
         </p>
       </div>
 
@@ -166,6 +267,151 @@ export default function MaintenancePage() {
         </div>
       ) : null}
 
+      {canEdit ? (
+        <Panel>
+          <PanelHeader
+            title="Провести ТО"
+            subtitle="Обязательно укажите фактическую дату проведения"
+          />
+          <form
+            onSubmit={onConduct}
+            className="m-4 grid gap-3 rounded-[14px] border border-[var(--accent)]/30 bg-[var(--bg-window)] p-4 md:grid-cols-2 xl:grid-cols-3"
+          >
+            <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
+              Машина
+              <select
+                className={inputClass}
+                value={conductId}
+                onChange={(e) => onSelectConductVehicle(e.target.value)}
+                required
+              >
+                <option value="">Выберите ТС</option>
+                {vehicles.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.plate} · {v.model}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
+              Дата проведения ТО
+              <input
+                className={inputClass}
+                type="date"
+                value={conductDate}
+                onChange={(e) => onConductDateChange(e.target.value)}
+                required
+              />
+            </label>
+            <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
+              Пробег на момент ТО, км
+              <input
+                className={inputClass}
+                type="number"
+                min={0}
+                value={conductKm}
+                onChange={(e) => onConductKmChange(e.target.value)}
+              />
+            </label>
+            <label className="block text-[12px] font-medium text-[var(--fg-secondary)] md:col-span-2 xl:col-span-3">
+              Выполненные работы
+              <textarea
+                className={textareaClass}
+                value={conductNote}
+                onChange={(e) => setConductNote(e.target.value)}
+                placeholder="Например: ТО-1, замена масла и фильтров"
+              />
+            </label>
+            <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
+              Дата следующего ТО
+              <input
+                className={inputClass}
+                type="date"
+                value={conductNextDate}
+                onChange={(e) => setConductNextDate(e.target.value)}
+                required
+              />
+            </label>
+            <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
+              Пробег следующего ТО, км
+              <input
+                className={inputClass}
+                type="number"
+                min={0}
+                value={conductNextKm}
+                onChange={(e) => setConductNextKm(e.target.value)}
+              />
+            </label>
+            <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
+              Что запланировать
+              <textarea
+                className={textareaClass}
+                value={conductNextNote}
+                onChange={(e) => setConductNextNote(e.target.value)}
+                placeholder="Следующие работы"
+              />
+            </label>
+            <div className="flex items-end xl:col-span-3">
+              <Button type="submit" size="sm">
+                Сохранить дату проведения
+              </Button>
+            </div>
+          </form>
+        </Panel>
+      ) : null}
+
+      {historyVehicle ? (
+        <Panel>
+          <PanelHeader
+            title={`Журнал ТО · ${historyVehicle.plate}`}
+            subtitle={`${historyRows.length} записей`}
+            action={
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setHistoryVehicleId(null)}
+              >
+                Скрыть
+              </Button>
+            }
+          />
+          {historyRows.length === 0 ? (
+            <p className="px-4 pb-4 text-[13px] text-[var(--fg-secondary)]">
+              Пока нет записей о проведённом ТО
+            </p>
+          ) : (
+            <DataTable
+              headers={[
+                "Дата проведения",
+                "Пробег",
+                "Работы",
+                "Следующее ТО",
+              ]}
+            >
+              {historyRows.map((r) => (
+                <Tr key={r.id}>
+                  <Td className="font-medium">{formatDateRu(r.date)}</Td>
+                  <Td className="font-mono text-[12px]">
+                    {r.odometer ? `${formatNumber(r.odometer, 0)} км` : "—"}
+                  </Td>
+                  <Td className="max-w-[280px] text-[12px]">
+                    {r.note || "—"}
+                  </Td>
+                  <Td>
+                    <div className="text-[12px]">{formatDateRu(r.nextDate)}</div>
+                    <div className="font-mono text-[11px] text-[var(--fg-secondary)]">
+                      {r.nextOdometer
+                        ? `${formatNumber(r.nextOdometer, 0)} км`
+                        : ""}
+                    </div>
+                  </Td>
+                </Tr>
+              ))}
+            </DataTable>
+          )}
+        </Panel>
+      ) : null}
+
       <Panel>
         <PanelHeader
           title="График ТО"
@@ -198,7 +444,7 @@ export default function MaintenancePage() {
             className="m-4 grid gap-3 rounded-[14px] border border-[var(--border)] bg-[var(--bg-window)] p-4 md:grid-cols-2 xl:grid-cols-3"
           >
             <p className="xl:col-span-3 text-[13px] font-semibold">
-              {editing.plate} · {editing.model}
+              Правка карточки · {editing.plate} · {editing.model}
             </p>
             <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
               Текущий пробег, км
@@ -211,7 +457,7 @@ export default function MaintenancePage() {
               />
             </label>
             <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
-              Дата прошедшего ТО
+              Дата проведения ТО
               <input
                 className={inputClass}
                 type="date"
@@ -287,11 +533,11 @@ export default function MaintenancePage() {
           headers={[
             "ТС",
             "Текущий пробег",
-            "Прошедшее ТО",
+            "Дата проведения",
             "Плановое ТО",
             "Остаток",
             "Статус",
-            ...(canEdit ? ["Действия"] : []),
+            "Действия",
           ]}
         >
           {rows.map(({ vehicle: v, status }) => (
@@ -331,15 +577,43 @@ export default function MaintenancePage() {
               </Td>
               {canEdit ? (
                 <Td>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        applyVehicleDefaults(v);
+                        setMessage(null);
+                      }}
+                    >
+                      Провести
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setHistoryVehicleId(v.id)}
+                    >
+                      Журнал
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => openEdit(v)}
+                    >
+                      Править
+                    </Button>
+                  </div>
+                </Td>
+              ) : (
+                <Td>
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() => openEdit(v)}
+                    onClick={() => setHistoryVehicleId(v.id)}
                   >
-                    Править
+                    Журнал
                   </Button>
                 </Td>
-              ) : null}
+              )}
             </Tr>
           ))}
         </DataTable>

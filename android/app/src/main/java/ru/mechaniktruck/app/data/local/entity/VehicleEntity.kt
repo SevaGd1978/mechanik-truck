@@ -20,6 +20,7 @@ data class VehicleEntity(
     val nextService: String,
     val nextServiceNote: String,
     val nextServiceOdometer: Double = 0.0,
+    val serviceHistoryJson: String = "[]",
     val status: String,
     val isDirty: Boolean = false,
     val isDeleted: Boolean = false,

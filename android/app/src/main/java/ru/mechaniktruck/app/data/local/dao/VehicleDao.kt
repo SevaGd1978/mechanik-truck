@@ -25,6 +25,9 @@ interface VehicleDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(vehicles: List<VehicleEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(vehicle: VehicleEntity)
+
     @Query("DELETE FROM vehicles")
     suspend fun deleteAll()
 

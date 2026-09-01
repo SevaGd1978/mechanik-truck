@@ -15,7 +15,7 @@ import {
   trailerTypes,
   vehicleTypes,
 } from "@/lib/fleet";
-import { formatDateRu } from "@/lib/maintenance";
+import { formatDateRu, historyNewestFirst, todayIso } from "@/lib/maintenance";
 import { formatNumber } from "@/lib/utils";
 
 const statusMap = {
@@ -74,8 +74,8 @@ export default function FleetPage() {
     vehicles,
     trailers,
     addVehicle,
-    updateVehicle,
     deleteVehicle,
+    recordConductedService,
     addTrailer,
     deleteTrailer,
   } = useFleet();
@@ -156,12 +156,14 @@ export default function FleetPage() {
 
   function openEditService(v: Vehicle) {
     setEditingVehicle(v);
-    setELastService(v.lastService || "");
-    setELastNote(v.lastServiceNote || "");
-    setELastKm(String(v.lastServiceOdometer || ""));
-    setENextService(v.nextService || "");
+    setELastService(todayIso());
+    setELastNote("");
+    setELastKm(String(v.odometer || ""));
+    setENextService(v.nextService || todayIso());
     setENextNote(v.nextServiceNote || "");
-    setENextKm(String(v.nextServiceOdometer || ""));
+    setENextKm(
+      String(v.nextServiceOdometer || (v.odometer || 0) + 15000),
+    );
     setShowVehicleForm(false);
     setMessage(null);
   }
@@ -207,13 +209,17 @@ export default function FleetPage() {
   function onSaveService(e: FormEvent) {
     e.preventDefault();
     if (!editingVehicle) return;
-    const res = updateVehicle(editingVehicle.id, {
-      lastService: eLastService,
-      lastServiceOdometer: Number(eLastKm) || 0,
-      lastServiceNote: eLastNote.trim(),
-      nextService: eNextService,
-      nextServiceOdometer: Number(eNextKm) || 0,
-      nextServiceNote: eNextNote.trim(),
+    if (!eLastService) {
+      setMessage({ type: "err", text: "Укажите дату проведения ТО" });
+      return;
+    }
+    const res = recordConductedService(editingVehicle.id, {
+      date: eLastService,
+      odometer: Number(eLastKm) || 0,
+      note: eLastNote.trim(),
+      nextDate: eNextService,
+      nextOdometer: Number(eNextKm) || 0,
+      nextNote: eNextNote.trim(),
     });
     if (!res.ok) {
       setMessage({ type: "err", text: res.error });
@@ -221,7 +227,7 @@ export default function FleetPage() {
     }
     setMessage({
       type: "ok",
-      text: `ТО для ${editingVehicle.plate} обновлено`,
+      text: `ТО для ${editingVehicle.plate} проведено ${formatDateRu(eLastService)}`,
     });
     setEditingVehicle(null);
   }
@@ -439,7 +445,7 @@ export default function FleetPage() {
                   Техническое обслуживание
                 </p>
                 <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
-                  Дата прошедшего ТО
+                  Дата проведения ТО
                   <input
                     className={inputClass}
                     type="date"
@@ -457,7 +463,7 @@ export default function FleetPage() {
                   />
                 </label>
                 <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
-                  Пробег прошедшего ТО, км
+                  Пробег на момент ТО, км
                   <input
                     className={inputClass}
                     type="number"
@@ -477,7 +483,7 @@ export default function FleetPage() {
                   />
                 </label>
                 <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
-                  Описание прошедшего ТО
+                  Что сделано при ТО
                   <textarea
                     className={textareaClass}
                     value={vLastNote}
@@ -518,15 +524,22 @@ export default function FleetPage() {
               className="m-4 grid gap-3 rounded-[14px] border border-[var(--border)] bg-[var(--bg-window)] p-4 md:grid-cols-2"
             >
               <p className="md:col-span-2 text-[13px] font-semibold text-[var(--fg)]">
-                ТО · {editingVehicle.plate} · {editingVehicle.model}
+                Провести ТО · {editingVehicle.plate} · {editingVehicle.model}
+              </p>
+              <p className="md:col-span-2 text-[12px] text-[var(--fg-secondary)]">
+                Последнее ТО: {formatDateRu(editingVehicle.lastService)}
+                {editingVehicle.lastServiceOdometer
+                  ? ` · ${formatNumber(editingVehicle.lastServiceOdometer, 0)} км`
+                  : ""}
               </p>
               <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
-                Дата прошедшего ТО
+                Дата проведения ТО
                 <input
                   className={inputClass}
                   type="date"
                   value={eLastService}
                   onChange={(e) => setELastService(e.target.value)}
+                  required
                 />
               </label>
               <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
@@ -540,7 +553,7 @@ export default function FleetPage() {
                 />
               </label>
               <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
-                Пробег прошедшего ТО, км
+                Пробег на момент ТО, км
                 <input
                   className={inputClass}
                   type="number"
@@ -560,7 +573,7 @@ export default function FleetPage() {
                 />
               </label>
               <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
-                Описание прошедшего ТО
+                Что сделано при ТО
                 <textarea
                   className={textareaClass}
                   value={eLastNote}
@@ -579,7 +592,7 @@ export default function FleetPage() {
               </label>
               <div className="flex items-end gap-2 md:col-span-2">
                 <Button type="submit" size="sm">
-                  Сохранить ТО
+                  Сохранить дату проведения
                 </Button>
                 <Button
                   type="button"
@@ -590,6 +603,25 @@ export default function FleetPage() {
                   Отмена
                 </Button>
               </div>
+              {historyNewestFirst(editingVehicle.serviceHistory || []).length ? (
+                <div className="md:col-span-2 rounded-[12px] border border-[var(--border)] p-3">
+                  <p className="text-[12px] font-semibold">Журнал проведения ТО</p>
+                  <ul className="mt-2 space-y-1.5">
+                    {historyNewestFirst(editingVehicle.serviceHistory).map((r) => (
+                      <li
+                        key={r.id}
+                        className="text-[12px] text-[var(--fg-secondary)]"
+                      >
+                        <span className="font-medium text-[var(--fg)]">
+                          {formatDateRu(r.date)}
+                        </span>
+                        {r.odometer ? ` · ${formatNumber(r.odometer, 0)} км` : ""}
+                        {r.note ? ` · ${r.note}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </form>
           ) : null}
 
@@ -600,7 +632,7 @@ export default function FleetPage() {
               "Тип",
               "Водитель",
               "Пробег",
-              "Прошедшее ТО",
+              "Дата проведения",
               "Плановое ТО",
               "Статус",
               ...(canEdit ? ["Действия"] : []),
@@ -642,7 +674,7 @@ export default function FleetPage() {
                         variant="secondary"
                         onClick={() => openEditService(v)}
                       >
-                        ТО
+                        Провести ТО
                       </Button>
                       <Button
                         size="sm"
