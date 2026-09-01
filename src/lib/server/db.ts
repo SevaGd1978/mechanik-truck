@@ -2,7 +2,7 @@ import { Pool, type QueryResultRow } from "pg";
 import { promises as fs } from "fs";
 import path from "path";
 import { DEFAULT_USERS, normalizeUser, type AppUser } from "@/lib/auth";
-import { DEFAULT_VEHICLES } from "@/lib/fleet";
+import { DEFAULT_VEHICLES, normalizeVehicle } from "@/lib/fleet";
 import { DEFAULT_DRIVERS, type Driver } from "@/lib/drivers";
 import type { Vehicle } from "@/lib/data";
 
@@ -35,7 +35,7 @@ function databaseUrl() {
   return process.env.DATABASE_URL?.trim() || "";
 }
 
-function usePostgres() {
+function isPostgresEnabled() {
   return Boolean(databaseUrl());
 }
 
@@ -99,11 +99,32 @@ function parsePgUser(row: Record<string, unknown>) {
   };
 }
 
+function asVehicle(raw: Partial<Vehicle> & { id?: string }): Vehicle {
+  const id = raw.id || `v-${Date.now()}`;
+  return normalizeVehicle({ ...raw, id });
+}
+
+function mergeIncomingVehicle(
+  existing: Vehicle | undefined,
+  incoming: Partial<Vehicle> & { id: string },
+): Vehicle {
+  const history =
+    Array.isArray(incoming.serviceHistory) && incoming.serviceHistory.length
+      ? incoming.serviceHistory
+      : existing?.serviceHistory;
+  return asVehicle({
+    ...(existing || {}),
+    ...incoming,
+    serviceHistory: history,
+    id: incoming.id,
+  });
+}
+
 function seedFileDb(): FileDb {
   const now = new Date().toISOString();
   return {
     users: DEFAULT_USERS.map((u) => asUser(u)),
-    vehicles: DEFAULT_VEHICLES.map((v) => ({ ...v })),
+    vehicles: DEFAULT_VEHICLES.map((v) => normalizeVehicle(v)),
     drivers: DEFAULT_DRIVERS.map((d) => ({ ...d })),
     tokens: {},
     updatedAt: now,
@@ -122,6 +143,7 @@ async function readFileDb(): Promise<FileDb> {
     }
     parsed.tokens = parsed.tokens || {};
     parsed.users = parsed.users.map((u) => asUser(u));
+    parsed.vehicles = parsed.vehicles.map((v) => asVehicle(v));
     return parsed;
   } catch {
     const seeded = seedFileDb();
@@ -198,10 +220,11 @@ async function initPostgres() {
   );
   if (Number(vehiclesCount.rows[0]?.c || 0) === 0) {
     for (const v of DEFAULT_VEHICLES) {
+      const normalized = normalizeVehicle(v);
       await p.query(
         `INSERT INTO vehicles (id, payload, updated_at) VALUES ($1,$2::jsonb,NOW())
          ON CONFLICT (id) DO NOTHING`,
-        [v.id, JSON.stringify(v)],
+        [normalized.id, JSON.stringify(normalized)],
       );
     }
   }
@@ -229,7 +252,7 @@ async function initPostgres() {
 export async function ensureDb() {
   if (!initPromise) {
     initPromise = (async () => {
-      if (usePostgres()) {
+      if (isPostgresEnabled()) {
         await initPostgres();
       } else {
         await readFileDb();
@@ -254,7 +277,7 @@ export async function loginUser(login: string, password: string) {
   await ensureDb();
   const normalized = login.trim().toLowerCase();
 
-  if (usePostgres()) {
+  if (isPostgresEnabled()) {
     const res = await getPool().query(
       `SELECT id, login, password, name, role, active, created_at AS "createdAt",
               responsibilities
@@ -288,7 +311,7 @@ export async function userFromToken(token: string | null) {
   if (!token) return null;
   await ensureDb();
 
-  if (usePostgres()) {
+  if (isPostgresEnabled()) {
     const res = await getPool().query(
       `SELECT u.id, u.login, u.password, u.name, u.role, u.active,
               u.created_at AS "createdAt", u.responsibilities
@@ -311,7 +334,7 @@ export async function userFromToken(token: string | null) {
 export async function getSnapshot(): Promise<SyncSnapshot> {
   await ensureDb();
 
-  if (usePostgres()) {
+  if (isPostgresEnabled()) {
     const p = getPool();
     const [vehicles, drivers, users, meta] = await Promise.all([
       p.query<{ payload: Vehicle }>("SELECT payload FROM vehicles ORDER BY id"),
@@ -325,7 +348,10 @@ export async function getSnapshot(): Promise<SyncSnapshot> {
       ),
     ]);
     return {
-      vehicles: vehicles.rows.map((r) => r.payload),
+      vehicles: vehicles.rows
+        .map((r) => r.payload)
+        .filter((v): v is Vehicle => Boolean(v?.id))
+        .map((v) => asVehicle(v)),
       drivers: drivers.rows.map((r) => r.payload),
       users: users.rows.map((row) =>
         publicUser(asUser(parsePgUser(row as Record<string, unknown>))),
@@ -337,7 +363,7 @@ export async function getSnapshot(): Promise<SyncSnapshot> {
 
   const db = await readFileDb();
   return {
-    vehicles: db.vehicles,
+    vehicles: db.vehicles.map((v) => asVehicle(v)),
     drivers: db.drivers,
     users: db.users.map(publicUser),
     updatedAt: db.updatedAt,
@@ -347,13 +373,14 @@ export async function getSnapshot(): Promise<SyncSnapshot> {
 
 export async function replaceVehicles(vehicles: Vehicle[]) {
   await ensureDb();
-  if (usePostgres()) {
+  const normalized = vehicles.map((v) => asVehicle(v));
+  if (isPostgresEnabled()) {
     const p = getPool();
     const client = await p.connect();
     try {
       await client.query("BEGIN");
       await client.query("DELETE FROM vehicles");
-      for (const v of vehicles) {
+      for (const v of normalized) {
         await client.query(
           `INSERT INTO vehicles (id, payload, updated_at) VALUES ($1,$2::jsonb,NOW())`,
           [v.id, JSON.stringify(v)],
@@ -375,19 +402,25 @@ export async function replaceVehicles(vehicles: Vehicle[]) {
   }
 
   const db = await readFileDb();
-  db.vehicles = vehicles;
+  db.vehicles = normalized;
   await writeFileDb(db);
 }
 
 export async function upsertVehicles(vehicles: Vehicle[]) {
   await ensureDb();
-  if (usePostgres()) {
+  if (isPostgresEnabled()) {
     const p = getPool();
     for (const v of vehicles) {
+      if (!v?.id) continue;
+      const existing = await p.query<{ payload: Vehicle }>(
+        "SELECT payload FROM vehicles WHERE id = $1",
+        [v.id],
+      );
+      const merged = mergeIncomingVehicle(existing.rows[0]?.payload, v);
       await p.query(
         `INSERT INTO vehicles (id, payload, updated_at) VALUES ($1,$2::jsonb,NOW())
          ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()`,
-        [v.id, JSON.stringify(v)],
+        [merged.id, JSON.stringify(merged)],
       );
     }
     await touchUpdatedAtPg();
@@ -395,15 +428,18 @@ export async function upsertVehicles(vehicles: Vehicle[]) {
   }
 
   const db = await readFileDb();
-  const map = new Map(db.vehicles.map((v) => [v.id, v]));
-  for (const v of vehicles) map.set(v.id, v);
+  const map = new Map(db.vehicles.map((item) => [item.id, item]));
+  for (const v of vehicles) {
+    if (!v?.id) continue;
+    map.set(v.id, mergeIncomingVehicle(map.get(v.id), v));
+  }
   db.vehicles = [...map.values()];
   await writeFileDb(db);
 }
 
 export async function deleteVehicle(id: string) {
   await ensureDb();
-  if (usePostgres()) {
+  if (isPostgresEnabled()) {
     await getPool().query("DELETE FROM vehicles WHERE id = $1", [id]);
     await touchUpdatedAtPg();
     return;
@@ -415,7 +451,7 @@ export async function deleteVehicle(id: string) {
 
 export async function upsertDrivers(drivers: Driver[]) {
   await ensureDb();
-  if (usePostgres()) {
+  if (isPostgresEnabled()) {
     const p = getPool();
     for (const d of drivers) {
       await p.query(
@@ -437,7 +473,7 @@ export async function upsertDrivers(drivers: Driver[]) {
 
 export async function deleteDriver(id: string) {
   await ensureDb();
-  if (usePostgres()) {
+  if (isPostgresEnabled()) {
     await getPool().query("DELETE FROM drivers WHERE id = $1", [id]);
     await touchUpdatedAtPg();
     return;
@@ -493,13 +529,13 @@ export async function healthInfo() {
       vehicles: snap.vehicles.length,
       drivers: snap.drivers.length,
       updatedAt: snap.updatedAt,
-      postgresConfigured: usePostgres(),
+      postgresConfigured: isPostgresEnabled(),
     };
   } catch (error) {
     return {
       ok: false,
       error: error instanceof Error ? error.message : "unknown",
-      postgresConfigured: usePostgres(),
+      postgresConfigured: isPostgresEnabled(),
     };
   }
 }

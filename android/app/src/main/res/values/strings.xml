@@ -33,8 +33,20 @@
     <string name="next_service">Плановое ТО: %1$s</string>
     <string name="maintenance_title">Техобслуживание</string>
     <string name="current_odometer">Текущий пробег: %1$d км</string>
-    <string name="last_service_km">Прошедшее ТО: %1$s · %2$d км</string>
+    <string name="last_service_km">Дата проведения ТО: %1$s · %2$d км</string>
     <string name="next_service_km">Плановое ТО: %1$s · %2$d км</string>
+    <string name="conduct_service_title">Провести ТО</string>
+    <string name="conduct_service_hint">Укажите фактическую дату проведения</string>
+    <string name="vehicle_label">Машина</string>
+    <string name="conduct_date_label">Дата проведения ТО</string>
+    <string name="conduct_odometer_label">Пробег на момент ТО, км</string>
+    <string name="conduct_work_label">Выполненные работы</string>
+    <string name="next_service_date_label">Дата следующего ТО</string>
+    <string name="next_service_odometer_label">Пробег следующего ТО, км</string>
+    <string name="next_service_work_label">Что запланировать</string>
+    <string name="save_conduct_date">Сохранить дату проведения</string>
+    <string name="conduct_saved">Дата проведения ТО сохранена</string>
+    <string name="service_history_title">Журнал ТО</string>
     <string name="no_date">—</string>
 
     <!-- Drivers -->

@@ -19,6 +19,16 @@ data class LoginResponse(
     val user: UserDto,
 )
 
+data class ServiceRecordDto(
+    val id: String = "",
+    val date: String = "",
+    val odometer: Double = 0.0,
+    val note: String = "",
+    val nextDate: String = "",
+    val nextOdometer: Double = 0.0,
+    val nextNote: String = "",
+)
+
 data class VehicleDto(
     val id: String,
     val plate: String,
@@ -35,6 +45,7 @@ data class VehicleDto(
     val nextService: String = "",
     val nextServiceNote: String = "",
     val nextServiceOdometer: Double = 0.0,
+    val serviceHistory: List<ServiceRecordDto> = emptyList(),
     val status: String = "active",
 )
 

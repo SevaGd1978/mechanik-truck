@@ -14,6 +14,7 @@ import {
   DEFAULT_VEHICLES,
   LEGACY_VEHICLES_STORAGE_KEY,
   LEGACY_VEHICLES_STORAGE_KEY_V2,
+  LEGACY_VEHICLES_STORAGE_KEY_V3,
   normalizeVehicle,
   Trailer,
   TrailerInput,
@@ -21,6 +22,10 @@ import {
   VehicleInput,
   VEHICLES_STORAGE_KEY,
 } from "@/lib/fleet";
+import {
+  applyConductedService,
+  type ConductedServiceInput,
+} from "@/lib/maintenance";
 
 type FleetContextValue = {
   vehicles: Vehicle[];
@@ -34,6 +39,10 @@ type FleetContextValue = {
     patch: Partial<Vehicle>,
   ) => { ok: true } | { ok: false; error: string };
   deleteVehicle: (id: string) => { ok: true } | { ok: false; error: string };
+  recordConductedService: (
+    id: string,
+    input: ConductedServiceInput,
+  ) => { ok: true } | { ok: false; error: string };
   addTrailer: (
     input: TrailerInput,
   ) => { ok: true; trailer: Trailer } | { ok: false; error: string };
@@ -83,6 +92,7 @@ function loadVehicles(): Vehicle[] {
     }
 
     const legacyRaw =
+      window.localStorage.getItem(LEGACY_VEHICLES_STORAGE_KEY_V3) ||
       window.localStorage.getItem(LEGACY_VEHICLES_STORAGE_KEY_V2) ||
       window.localStorage.getItem(LEGACY_VEHICLES_STORAGE_KEY);
     if (legacyRaw) {
@@ -180,6 +190,25 @@ export function FleetProvider({ children }: { children: React.ReactNode }) {
     return { ok: true as const };
   }, []);
 
+  const recordConductedService = useCallback(
+    (id: string, input: ConductedServiceInput) => {
+      if (!input.date?.trim()) {
+        return { ok: false as const, error: "Укажите дату проведения ТО" };
+      }
+      const list = loadVehicles();
+      const current = list.find((v) => v.id === id);
+      if (!current) {
+        return { ok: false as const, error: "ТС не найдено" };
+      }
+      const updated = normalizeVehicle(applyConductedService(current, input));
+      const next = list.map((v) => (v.id === id ? updated : v));
+      saveList(VEHICLES_STORAGE_KEY, next);
+      setVehicles(next);
+      return { ok: true as const };
+    },
+    [],
+  );
+
   const addTrailer = useCallback((input: TrailerInput) => {
     const plate = input.plate.trim().toUpperCase();
     const model = input.model.trim();
@@ -236,6 +265,7 @@ export function FleetProvider({ children }: { children: React.ReactNode }) {
       addVehicle,
       updateVehicle,
       deleteVehicle,
+      recordConductedService,
       addTrailer,
       updateTrailer,
       deleteTrailer,
@@ -247,6 +277,7 @@ export function FleetProvider({ children }: { children: React.ReactNode }) {
       addVehicle,
       updateVehicle,
       deleteVehicle,
+      recordConductedService,
       addTrailer,
       updateTrailer,
       deleteTrailer,

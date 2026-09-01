@@ -31,6 +31,10 @@ class SyncRepository(
     fun drivers(): Flow<List<DriverEntity>> = driverDao.getAllFlow()
     val lastSyncAt: Flow<Long?> = preferencesManager.lastSyncAt
 
+    suspend fun upsertVehicle(vehicle: VehicleEntity) {
+        vehicleDao.upsert(vehicle.copy(isDirty = true, isDeleted = false))
+    }
+
     suspend fun sync(): SyncResult {
         return try {
             pushLocalChanges()

@@ -1,5 +1,9 @@
 import type { Vehicle, VehicleStatus } from "@/lib/data";
 import { vehicles as seedVehicles } from "@/lib/data";
+import {
+  seedServiceHistory,
+  SERVICE_INTERVAL_KM,
+} from "@/lib/maintenance";
 
 export type TrailerStatus = "free" | "coupled" | "service" | "repair";
 
@@ -14,10 +18,11 @@ export type Trailer = {
   status: TrailerStatus;
 };
 
-export const VEHICLES_STORAGE_KEY = "mechanik-vehicles-v3";
+export const VEHICLES_STORAGE_KEY = "mechanik-vehicles-v4";
 export const TRAILERS_STORAGE_KEY = "mechanik-trailers-v1";
 export const LEGACY_VEHICLES_STORAGE_KEY = "mechanik-vehicles-v1";
 export const LEGACY_VEHICLES_STORAGE_KEY_V2 = "mechanik-vehicles-v2";
+export const LEGACY_VEHICLES_STORAGE_KEY_V3 = "mechanik-vehicles-v3";
 
 export const vehicleTypes = [
   "Грузовой",
@@ -69,8 +74,6 @@ export const DEFAULT_TRAILERS: Trailer[] = [
   },
 ];
 
-export const DEFAULT_VEHICLES: Vehicle[] = seedVehicles.map((v) => ({ ...v }));
-
 export type VehicleInput = {
   plate: string;
   model: string;
@@ -88,8 +91,6 @@ export type VehicleInput = {
   status: VehicleStatus;
 };
 
-const SERVICE_INTERVAL_KM = 15_000;
-
 /** Нормализация ТС из старого localStorage без полей ТО. */
 export function normalizeVehicle(raw: Partial<Vehicle> & { id: string }): Vehicle {
   const today = new Date().toISOString().slice(0, 10);
@@ -100,6 +101,14 @@ export function normalizeVehicle(raw: Partial<Vehicle> & { id: string }): Vehicl
   const nextOdo = Number.isFinite(raw.nextServiceOdometer)
     ? Number(raw.nextServiceOdometer)
     : lastOdo + SERVICE_INTERVAL_KM;
+  const serviceHistory = seedServiceHistory({
+    ...raw,
+    lastServiceOdometer: lastOdo,
+    nextServiceOdometer: nextOdo,
+  });
+  const latest = serviceHistory.length
+    ? serviceHistory[serviceHistory.length - 1]
+    : null;
   return {
     id: raw.id,
     plate: raw.plate ?? "",
@@ -114,12 +123,13 @@ export function normalizeVehicle(raw: Partial<Vehicle> & { id: string }): Vehicl
       : Number.isFinite(raw.fuelNorm)
         ? Number(raw.fuelNorm)
         : 0,
-    lastService: raw.lastService || "",
+    lastService: raw.lastService || latest?.date || "",
     lastServiceOdometer: lastOdo,
-    lastServiceNote: raw.lastServiceNote || "",
-    nextService: raw.nextService || today,
+    lastServiceNote: raw.lastServiceNote || latest?.note || "",
+    nextService: raw.nextService || latest?.nextDate || today,
     nextServiceOdometer: nextOdo,
-    nextServiceNote: raw.nextServiceNote || "",
+    nextServiceNote: raw.nextServiceNote || latest?.nextNote || "",
+    serviceHistory,
     status: (raw.status as VehicleStatus) || "active",
   };
 }
@@ -137,3 +147,7 @@ export type TrailerInput = {
 export function canManageFleet(role: string) {
   return role === "admin" || role === "manager";
 }
+
+export const DEFAULT_VEHICLES: Vehicle[] = seedVehicles.map((v) =>
+  normalizeVehicle(v),
+);

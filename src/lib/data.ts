@@ -1,5 +1,22 @@
 export type VehicleStatus = "active" | "service" | "idle" | "alert";
 
+/** Запись о фактически проведённом ТО */
+export type ServiceRecord = {
+  id: string;
+  /** Дата проведения ТО (ISO yyyy-mm-dd) */
+  date: string;
+  /** Пробег на момент проведения, км */
+  odometer: number;
+  /** Что сделано */
+  note: string;
+  /** Назначенная дата следующего ТО */
+  nextDate: string;
+  /** Назначенный пробег следующего ТО, км */
+  nextOdometer: number;
+  /** Что запланировать */
+  nextNote: string;
+};
+
 export type Vehicle = {
   id: string;
   plate: string;
@@ -10,7 +27,7 @@ export type Vehicle = {
   costPerKm: number;
   fuelNorm: number;
   fuelFact: number;
-  /** Дата прошедшего ТО (ISO yyyy-mm-dd) */
+  /** Дата последнего проведённого ТО (ISO yyyy-mm-dd) */
   lastService: string;
   /** Пробег на момент прошедшего ТО, км */
   lastServiceOdometer: number;
@@ -22,6 +39,8 @@ export type Vehicle = {
   nextServiceOdometer: number;
   /** Описание планового ТО */
   nextServiceNote: string;
+  /** Журнал проведённых ТО */
+  serviceHistory: ServiceRecord[];
   status: VehicleStatus;
 };
 
@@ -82,6 +101,7 @@ export const vehicles: Vehicle[] = [
     nextService: "2026-08-22",
     nextServiceOdometer: 186420,
     nextServiceNote: "ТО-2 по пробегу: тормоза, ремни, диагностика",
+    serviceHistory: [],
     status: "active",
   },
   {
@@ -100,6 +120,7 @@ export const vehicles: Vehicle[] = [
     nextService: "2026-08-18",
     nextServiceOdometer: 236880,
     nextServiceNote: "Замена масла и фильтров (просрочено)",
+    serviceHistory: [],
     status: "alert",
   },
   {
@@ -118,6 +139,7 @@ export const vehicles: Vehicle[] = [
     nextService: "2026-09-02",
     nextServiceOdometer: 92450,
     nextServiceNote: "Плановое ТО: масло, свечи, осмотр подвески",
+    serviceHistory: [],
     status: "active",
   },
   {
@@ -136,6 +158,7 @@ export const vehicles: Vehicle[] = [
     nextService: "2026-08-19",
     nextServiceOdometer: 310220,
     nextServiceNote: "Диагностика КПП и замена трансмиссионного масла",
+    serviceHistory: [],
     status: "service",
   },
   {
@@ -154,6 +177,7 @@ export const vehicles: Vehicle[] = [
     nextService: "2026-08-28",
     nextServiceOdometer: 15400,
     nextServiceNote: "Плановый осмотр навесного оборудования",
+    serviceHistory: [],
     status: "idle",
   },
   {
@@ -172,6 +196,7 @@ export const vehicles: Vehicle[] = [
     nextService: "2026-09-10",
     nextServiceOdometer: 72890,
     nextServiceNote: "Плановое ТО: свечи, ремень генератора",
+    serviceHistory: [],
     status: "active",
   },
 ];
