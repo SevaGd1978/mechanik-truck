@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Механик Truck</string>
+
+    <!-- Login -->
+    <string name="login_title">Вход в систему</string>
+    <string name="login_label">Логин</string>
+    <string name="password_label">Пароль</string>
+    <string name="login_button">Войти</string>
+    <string name="login_error">Неверный логин или пароль</string>
+    <string name="login_network_error">Ошибка сети. Проверьте подключение.</string>
+
+    <!-- Home -->
+    <string name="home_title">Главная</string>
+    <string name="vehicles_count">Автомобили</string>
+    <string name="drivers_count">Водители</string>
+    <string name="sync_button">Синхронизировать</string>
+    <string name="syncing">Синхронизация…</string>
+    <string name="last_sync">Последняя синхронизация: %1$s</string>
+    <string name="last_sync_never">Последняя синхронизация: никогда</string>
+    <string name="sync_success">Синхронизация выполнена</string>
+    <string name="sync_error">Ошибка синхронизации: %1$s</string>
+    <string name="nav_fleet">Автопарк</string>
+    <string name="nav_drivers">Водители</string>
+    <string name="nav_settings">Настройки</string>
+    <string name="logout">Выйти</string>
+
+    <!-- Fleet -->
+    <string name="fleet_title">Автопарк</string>
+    <string name="fleet_empty">Нет автомобилей</string>
+    <string name="last_service">Прошлое ТО: %1$s</string>
+    <string name="next_service">Плановое ТО: %1$s</string>
+    <string name="no_date">—</string>
+
+    <!-- Drivers -->
+    <string name="drivers_title">Водители</string>
+    <string name="drivers_empty">Нет водителей</string>
+    <string name="license_label">Удостоверение: %1$s</string>
+    <string name="phone_label">Тел: %1$s</string>
+
+    <!-- Driver status -->
+    <string name="status_active">Работает</string>
+    <string name="status_vacation">Отпуск</string>
+    <string name="status_sick">Больничный</string>
+    <string name="status_fired">Уволен</string>
+
+    <!-- Vehicle status -->
+    <string name="vehicle_status_active">На линии</string>
+    <string name="vehicle_status_service">На ТО</string>
+    <string name="vehicle_status_idle">Стоит</string>
+    <string name="vehicle_status_alert">Требует внимания</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Настройки</string>
+    <string name="api_url_label">URL API</string>
+    <string name="api_url_hint">https://example.com</string>
+    <string name="save_settings">Сохранить</string>
+    <string name="settings_saved">Настройки сохранены</string>
+    <string name="user_info">Пользователь: %1$s (%2$s)</string>
+
+    <!-- Common -->
+    <string name="back">Назад</string>
+    <string name="loading">Загрузка…</string>
+    <string name="error">Ошибка</string>
+</resources>
