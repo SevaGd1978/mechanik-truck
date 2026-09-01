@@ -14,9 +14,10 @@ export type Trailer = {
   status: TrailerStatus;
 };
 
-export const VEHICLES_STORAGE_KEY = "mechanik-vehicles-v2";
+export const VEHICLES_STORAGE_KEY = "mechanik-vehicles-v3";
 export const TRAILERS_STORAGE_KEY = "mechanik-trailers-v1";
 export const LEGACY_VEHICLES_STORAGE_KEY = "mechanik-vehicles-v1";
+export const LEGACY_VEHICLES_STORAGE_KEY_V2 = "mechanik-vehicles-v2";
 
 export const vehicleTypes = [
   "Грузовой",
@@ -79,22 +80,33 @@ export type VehicleInput = {
   costPerKm: number;
   fuelNorm: number;
   lastService: string;
+  lastServiceOdometer: number;
   lastServiceNote: string;
   nextService: string;
+  nextServiceOdometer: number;
   nextServiceNote: string;
   status: VehicleStatus;
 };
 
+const SERVICE_INTERVAL_KM = 15_000;
+
 /** Нормализация ТС из старого localStorage без полей ТО. */
 export function normalizeVehicle(raw: Partial<Vehicle> & { id: string }): Vehicle {
   const today = new Date().toISOString().slice(0, 10);
+  const odometer = Number.isFinite(raw.odometer) ? Number(raw.odometer) : 0;
+  const lastOdo = Number.isFinite(raw.lastServiceOdometer)
+    ? Number(raw.lastServiceOdometer)
+    : Math.max(0, odometer - SERVICE_INTERVAL_KM);
+  const nextOdo = Number.isFinite(raw.nextServiceOdometer)
+    ? Number(raw.nextServiceOdometer)
+    : lastOdo + SERVICE_INTERVAL_KM;
   return {
     id: raw.id,
     plate: raw.plate ?? "",
     model: raw.model ?? "",
     type: raw.type ?? "Грузовой",
     driver: raw.driver ?? "Не назначен",
-    odometer: Number.isFinite(raw.odometer) ? Number(raw.odometer) : 0,
+    odometer,
     costPerKm: Number.isFinite(raw.costPerKm) ? Number(raw.costPerKm) : 0,
     fuelNorm: Number.isFinite(raw.fuelNorm) ? Number(raw.fuelNorm) : 0,
     fuelFact: Number.isFinite(raw.fuelFact)
@@ -103,8 +115,10 @@ export function normalizeVehicle(raw: Partial<Vehicle> & { id: string }): Vehicl
         ? Number(raw.fuelNorm)
         : 0,
     lastService: raw.lastService || "",
+    lastServiceOdometer: lastOdo,
     lastServiceNote: raw.lastServiceNote || "",
     nextService: raw.nextService || today,
+    nextServiceOdometer: nextOdo,
     nextServiceNote: raw.nextServiceNote || "",
     status: (raw.status as VehicleStatus) || "active",
   };

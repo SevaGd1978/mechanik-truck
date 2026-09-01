@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Settings
@@ -44,6 +45,7 @@ import ru.mechaniktruck.app.ui.viewmodel.HomeViewModel
 @Composable
 fun HomeScreen(
     onNavigateFleet: () -> Unit,
+    onNavigateMaintenance: () -> Unit,
     onNavigateDrivers: () -> Unit,
     onNavigateSettings: () -> Unit,
     onLogout: () -> Unit,
@@ -171,6 +173,17 @@ fun HomeScreen(
                 Icon(Icons.Default.DirectionsCar, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource(R.string.nav_fleet))
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedButton(
+                onClick = onNavigateMaintenance,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Default.Build, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.nav_maintenance))
             }
 
             Spacer(modifier = Modifier.height(8.dp))

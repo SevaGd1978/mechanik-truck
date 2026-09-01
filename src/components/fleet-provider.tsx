@@ -13,6 +13,7 @@ import {
   DEFAULT_TRAILERS,
   DEFAULT_VEHICLES,
   LEGACY_VEHICLES_STORAGE_KEY,
+  LEGACY_VEHICLES_STORAGE_KEY_V2,
   normalizeVehicle,
   Trailer,
   TrailerInput,
@@ -81,7 +82,9 @@ function loadVehicles(): Vehicle[] {
       }
     }
 
-    const legacyRaw = window.localStorage.getItem(LEGACY_VEHICLES_STORAGE_KEY);
+    const legacyRaw =
+      window.localStorage.getItem(LEGACY_VEHICLES_STORAGE_KEY_V2) ||
+      window.localStorage.getItem(LEGACY_VEHICLES_STORAGE_KEY);
     if (legacyRaw) {
       const parsed = JSON.parse(legacyRaw) as Partial<Vehicle>[];
       if (Array.isArray(parsed)) {
@@ -136,8 +139,14 @@ export function FleetProvider({ children }: { children: React.ReactNode }) {
       fuelNorm: Number.isFinite(input.fuelNorm) ? input.fuelNorm : 0,
       fuelFact: Number.isFinite(input.fuelNorm) ? input.fuelNorm : 0,
       lastService: input.lastService || "",
+      lastServiceOdometer: Number.isFinite(input.lastServiceOdometer)
+        ? input.lastServiceOdometer
+        : 0,
       lastServiceNote: input.lastServiceNote.trim(),
       nextService: input.nextService || today,
+      nextServiceOdometer: Number.isFinite(input.nextServiceOdometer)
+        ? input.nextServiceOdometer
+        : 0,
       nextServiceNote: input.nextServiceNote.trim(),
       status: input.status || "active",
     });

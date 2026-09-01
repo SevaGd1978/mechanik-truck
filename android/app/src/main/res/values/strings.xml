@@ -21,6 +21,7 @@
     <string name="sync_success">Синхронизация выполнена</string>
     <string name="sync_error">Ошибка синхронизации: %1$s</string>
     <string name="nav_fleet">Автопарк</string>
+    <string name="nav_maintenance">Техобслуживание</string>
     <string name="nav_drivers">Водители</string>
     <string name="nav_settings">Настройки</string>
     <string name="logout">Выйти</string>
@@ -30,6 +31,10 @@
     <string name="fleet_empty">Нет автомобилей</string>
     <string name="last_service">Прошлое ТО: %1$s</string>
     <string name="next_service">Плановое ТО: %1$s</string>
+    <string name="maintenance_title">Техобслуживание</string>
+    <string name="current_odometer">Текущий пробег: %1$d км</string>
+    <string name="last_service_km">Прошедшее ТО: %1$s · %2$d км</string>
+    <string name="next_service_km">Плановое ТО: %1$s · %2$d км</string>
     <string name="no_date">—</string>
 
     <!-- Drivers -->

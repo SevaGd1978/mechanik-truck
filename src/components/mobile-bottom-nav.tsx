@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  CalendarClock,
   ClipboardList,
   LayoutDashboard,
   Menu,
   Truck,
-  Wrench,
 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { canAccessRoute } from "@/lib/auth";
@@ -16,8 +16,8 @@ import { cn } from "@/lib/utils";
 const primaryItems = [
   { href: "/", label: "Обзор", icon: LayoutDashboard },
   { href: "/fleet", label: "Автопарк", icon: Truck },
+  { href: "/maintenance", label: "ТО", icon: CalendarClock },
   { href: "/waybills", label: "ПЛ", icon: ClipboardList },
-  { href: "/service", label: "Сервис", icon: Wrench },
 ] as const;
 
 export function MobileBottomNav({ onMore }: { onMore: () => void }) {

@@ -12,10 +12,14 @@ export type Vehicle = {
   fuelFact: number;
   /** Дата прошедшего ТО (ISO yyyy-mm-dd) */
   lastService: string;
+  /** Пробег на момент прошедшего ТО, км */
+  lastServiceOdometer: number;
   /** Описание выполненного ТО */
   lastServiceNote: string;
   /** Дата планового ТО (ISO yyyy-mm-dd) */
   nextService: string;
+  /** Плановый пробег следующего ТО, км */
+  nextServiceOdometer: number;
   /** Описание планового ТО */
   nextServiceNote: string;
   status: VehicleStatus;
@@ -73,8 +77,10 @@ export const vehicles: Vehicle[] = [
     fuelNorm: 28.5,
     fuelFact: 29.1,
     lastService: "2026-05-14",
+    lastServiceOdometer: 171420,
     lastServiceNote: "ТО-1: замена масла, масляного и воздушного фильтров",
     nextService: "2026-08-22",
+    nextServiceOdometer: 186420,
     nextServiceNote: "ТО-2 по пробегу: тормоза, ремни, диагностика",
     status: "active",
   },
@@ -89,8 +95,10 @@ export const vehicles: Vehicle[] = [
     fuelNorm: 27.0,
     fuelFact: 31.4,
     lastService: "2026-02-10",
+    lastServiceOdometer: 221880,
     lastServiceNote: "Сезонное ТО: АКБ, антифриз, проверка ходовой",
     nextService: "2026-08-18",
+    nextServiceOdometer: 236880,
     nextServiceNote: "Замена масла и фильтров (просрочено)",
     status: "alert",
   },
@@ -105,8 +113,10 @@ export const vehicles: Vehicle[] = [
     fuelNorm: 11.2,
     fuelFact: 10.9,
     lastService: "2026-06-20",
+    lastServiceOdometer: 77450,
     lastServiceNote: "Замена тормозных колодок и тормозной жидкости",
     nextService: "2026-09-02",
+    nextServiceOdometer: 92450,
     nextServiceNote: "Плановое ТО: масло, свечи, осмотр подвески",
     status: "active",
   },
@@ -121,8 +131,10 @@ export const vehicles: Vehicle[] = [
     fuelNorm: 30.0,
     fuelFact: 30.2,
     lastService: "2026-04-03",
+    lastServiceOdometer: 295220,
     lastServiceNote: "ТО-2: сцепление, регулировка клапанов",
     nextService: "2026-08-19",
+    nextServiceOdometer: 310220,
     nextServiceNote: "Диагностика КПП и замена трансмиссионного масла",
     status: "service",
   },
@@ -137,8 +149,10 @@ export const vehicles: Vehicle[] = [
     fuelNorm: 18.0,
     fuelFact: 17.6,
     lastService: "2026-07-01",
+    lastServiceOdometer: 9400,
     lastServiceNote: "Замена гидравлического шланга и фильтров гидравлики",
     nextService: "2026-08-28",
+    nextServiceOdometer: 15400,
     nextServiceNote: "Плановый осмотр навесного оборудования",
     status: "idle",
   },
@@ -153,8 +167,10 @@ export const vehicles: Vehicle[] = [
     fuelNorm: 12.5,
     fuelFact: 13.8,
     lastService: "2026-03-28",
+    lastServiceOdometer: 52890,
     lastServiceNote: "ТО-1: масло, фильтры, проверка ГРМ",
     nextService: "2026-09-10",
+    nextServiceOdometer: 72890,
     nextServiceNote: "Плановое ТО: свечи, ремень генератора",
     status: "active",
   },
@@ -272,6 +288,7 @@ export const activity = [
 export const navItems = [
   { href: "/", label: "Обзор", icon: "LayoutDashboard" },
   { href: "/fleet", label: "Автопарк", icon: "Truck" },
+  { href: "/maintenance", label: "Техобслуживание", icon: "CalendarClock" },
   { href: "/drivers", label: "Водители", icon: "IdCard" },
   { href: "/waybills", label: "Путевые листы", icon: "ClipboardList" },
   { href: "/service", label: "Сервис", icon: "Wrench" },

@@ -15,6 +15,7 @@ import {
   trailerTypes,
   vehicleTypes,
 } from "@/lib/fleet";
+import { formatDateRu } from "@/lib/maintenance";
 import { formatNumber } from "@/lib/utils";
 
 const statusMap = {
@@ -37,23 +38,23 @@ const inputClass =
 const textareaClass =
   "mt-1.5 min-h-[72px] w-full resize-y rounded-[10px] border border-[var(--border-strong)] bg-[var(--bg-input)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]";
 
-function formatDateRu(iso: string) {
-  if (!iso) return "—";
-  const [y, m, d] = iso.split("-");
-  if (!y || !m || !d) return iso;
-  return `${d}.${m}.${y}`;
-}
-
 function ServiceCell({
   date,
+  km,
   note,
 }: {
   date: string;
+  km?: number;
   note: string;
 }) {
   return (
     <div className="max-w-[220px]">
       <div className="font-medium text-[var(--fg)]">{formatDateRu(date)}</div>
+      {km ? (
+        <div className="mt-0.5 font-mono text-[11px] text-[var(--fg-secondary)]">
+          {formatNumber(km, 0)} км
+        </div>
+      ) : null}
       {note ? (
         <div className="mt-0.5 text-[11px] leading-snug text-[var(--fg-tertiary)]">
           {note}
@@ -100,16 +101,20 @@ export default function FleetPage() {
   const [vFuel, setVFuel] = useState("20");
   const [vLastService, setVLastService] = useState("");
   const [vLastNote, setVLastNote] = useState("");
+  const [vLastKm, setVLastKm] = useState("");
   const [vService, setVService] = useState(
     new Date().toISOString().slice(0, 10),
   );
   const [vNextNote, setVNextNote] = useState("");
+  const [vNextKm, setVNextKm] = useState("");
   const [vStatus, setVStatus] = useState<VehicleStatus>("active");
 
   const [eLastService, setELastService] = useState("");
   const [eLastNote, setELastNote] = useState("");
+  const [eLastKm, setELastKm] = useState("");
   const [eNextService, setENextService] = useState("");
   const [eNextNote, setENextNote] = useState("");
+  const [eNextKm, setENextKm] = useState("");
 
   const [tPlate, setTPlate] = useState("");
   const [tModel, setTModel] = useState("");
@@ -153,8 +158,10 @@ export default function FleetPage() {
     setEditingVehicle(v);
     setELastService(v.lastService || "");
     setELastNote(v.lastServiceNote || "");
+    setELastKm(String(v.lastServiceOdometer || ""));
     setENextService(v.nextService || "");
     setENextNote(v.nextServiceNote || "");
+    setENextKm(String(v.nextServiceOdometer || ""));
     setShowVehicleForm(false);
     setMessage(null);
   }
@@ -170,8 +177,10 @@ export default function FleetPage() {
       costPerKm: Number(vCost) || 0,
       fuelNorm: Number(vFuel) || 0,
       lastService: vLastService,
+      lastServiceOdometer: Number(vLastKm) || 0,
       lastServiceNote: vLastNote,
       nextService: vService,
+      nextServiceOdometer: Number(vNextKm) || 0,
       nextServiceNote: vNextNote,
       status: vStatus,
     });
@@ -189,7 +198,9 @@ export default function FleetPage() {
     setVOdometer("0");
     setVLastService("");
     setVLastNote("");
+    setVLastKm("");
     setVNextNote("");
+    setVNextKm("");
     setShowVehicleForm(false);
   }
 
@@ -198,8 +209,10 @@ export default function FleetPage() {
     if (!editingVehicle) return;
     const res = updateVehicle(editingVehicle.id, {
       lastService: eLastService,
+      lastServiceOdometer: Number(eLastKm) || 0,
       lastServiceNote: eLastNote.trim(),
       nextService: eNextService,
+      nextServiceOdometer: Number(eNextKm) || 0,
       nextServiceNote: eNextNote.trim(),
     });
     if (!res.ok) {
@@ -444,6 +457,26 @@ export default function FleetPage() {
                   />
                 </label>
                 <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
+                  Пробег прошедшего ТО, км
+                  <input
+                    className={inputClass}
+                    type="number"
+                    min={0}
+                    value={vLastKm}
+                    onChange={(e) => setVLastKm(e.target.value)}
+                  />
+                </label>
+                <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
+                  Пробег планового ТО, км
+                  <input
+                    className={inputClass}
+                    type="number"
+                    min={0}
+                    value={vNextKm}
+                    onChange={(e) => setVNextKm(e.target.value)}
+                  />
+                </label>
+                <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
                   Описание прошедшего ТО
                   <textarea
                     className={textareaClass}
@@ -507,6 +540,26 @@ export default function FleetPage() {
                 />
               </label>
               <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
+                Пробег прошедшего ТО, км
+                <input
+                  className={inputClass}
+                  type="number"
+                  min={0}
+                  value={eLastKm}
+                  onChange={(e) => setELastKm(e.target.value)}
+                />
+              </label>
+              <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
+                Пробег планового ТО, км
+                <input
+                  className={inputClass}
+                  type="number"
+                  min={0}
+                  value={eNextKm}
+                  onChange={(e) => setENextKm(e.target.value)}
+                />
+              </label>
+              <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
                 Описание прошедшего ТО
                 <textarea
                   className={textareaClass}
@@ -563,10 +616,18 @@ export default function FleetPage() {
                   {formatNumber(v.odometer, 0)} км
                 </Td>
                 <Td>
-                  <ServiceCell date={v.lastService} note={v.lastServiceNote} />
+                  <ServiceCell
+                    date={v.lastService}
+                    km={v.lastServiceOdometer}
+                    note={v.lastServiceNote}
+                  />
                 </Td>
                 <Td>
-                  <ServiceCell date={v.nextService} note={v.nextServiceNote} />
+                  <ServiceCell
+                    date={v.nextService}
+                    km={v.nextServiceOdometer}
+                    note={v.nextServiceNote}
+                  />
                 </Td>
                 <Td>
                   <Badge tone={statusMap[v.status].tone}>

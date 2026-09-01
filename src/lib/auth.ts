@@ -57,6 +57,7 @@ export const roleRoutes: Record<UserRole, string[]> = {
   admin: [
     "/",
     "/fleet",
+    "/maintenance",
     "/drivers",
     "/waybills",
     "/service",
@@ -69,6 +70,7 @@ export const roleRoutes: Record<UserRole, string[]> = {
   manager: [
     "/",
     "/fleet",
+    "/maintenance",
     "/drivers",
     "/waybills",
     "/service",
@@ -81,6 +83,7 @@ export const roleRoutes: Record<UserRole, string[]> = {
   mechanic: [
     "/",
     "/fleet",
+    "/maintenance",
     "/drivers",
     "/waybills",
     "/service",

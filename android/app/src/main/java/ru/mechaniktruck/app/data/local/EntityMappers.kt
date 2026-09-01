@@ -18,8 +18,10 @@ fun VehicleDto.toEntity(isDirty: Boolean = false, isDeleted: Boolean = false): V
         fuelFact = fuelFact,
         lastService = lastService,
         lastServiceNote = lastServiceNote,
+        lastServiceOdometer = lastServiceOdometer,
         nextService = nextService,
         nextServiceNote = nextServiceNote,
+        nextServiceOdometer = nextServiceOdometer,
         status = status,
         isDirty = isDirty,
         isDeleted = isDeleted,
@@ -38,8 +40,10 @@ fun VehicleEntity.toDto(): VehicleDto =
         fuelFact = fuelFact,
         lastService = lastService,
         lastServiceNote = lastServiceNote,
+        lastServiceOdometer = lastServiceOdometer,
         nextService = nextService,
         nextServiceNote = nextServiceNote,
+        nextServiceOdometer = nextServiceOdometer,
         status = status,
     )
 
