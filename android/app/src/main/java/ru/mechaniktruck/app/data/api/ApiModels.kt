@@ -31,8 +31,10 @@ data class VehicleDto(
     val fuelFact: Double = 0.0,
     val lastService: String = "",
     val lastServiceNote: String = "",
+    val lastServiceOdometer: Double = 0.0,
     val nextService: String = "",
     val nextServiceNote: String = "",
+    val nextServiceOdometer: Double = 0.0,
     val status: String = "active",
 )
 

@@ -11,6 +11,7 @@ import ru.mechaniktruck.app.ui.screens.drivers.DriversScreen
 import ru.mechaniktruck.app.ui.screens.fleet.FleetScreen
 import ru.mechaniktruck.app.ui.screens.home.HomeScreen
 import ru.mechaniktruck.app.ui.screens.login.LoginScreen
+import ru.mechaniktruck.app.ui.screens.maintenance.MaintenanceScreen
 import ru.mechaniktruck.app.ui.screens.settings.SettingsScreen
 
 @Composable
@@ -40,6 +41,7 @@ fun NavGraph(
         composable(Routes.HOME) {
             HomeScreen(
                 onNavigateFleet = { navController.navigate(Routes.FLEET) },
+                onNavigateMaintenance = { navController.navigate(Routes.MAINTENANCE) },
                 onNavigateDrivers = { navController.navigate(Routes.DRIVERS) },
                 onNavigateSettings = { navController.navigate(Routes.SETTINGS) },
                 onLogout = {
@@ -52,6 +54,10 @@ fun NavGraph(
 
         composable(Routes.FLEET) {
             FleetScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Routes.MAINTENANCE) {
+            MaintenanceScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Routes.DRIVERS) {

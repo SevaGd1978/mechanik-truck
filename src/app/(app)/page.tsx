@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { ArrowUpRight, Plus } from "lucide-react";
-import { activity, kpis, serviceOrders } from "@/lib/data";
+import { activity, kpis } from "@/lib/data";
 import { useFleet } from "@/components/fleet-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { DataTable, Td, Tr } from "@/components/ui/data-table";
-import { formatCurrency, formatNumber } from "@/lib/utils";
+import { formatDateRu, getMaintenanceStatus, summarizeMaintenance } from "@/lib/maintenance";
+import { formatNumber } from "@/lib/utils";
 
 const statusMap = {
   active: { label: "В работе", tone: "success" as const },
@@ -20,6 +21,22 @@ const statusMap = {
 
 export default function DashboardPage() {
   const { vehicles, trailers } = useFleet();
+  const toSummary = summarizeMaintenance(vehicles);
+  const upcoming = [...vehicles]
+    .map((v) => ({ v, status: getMaintenanceStatus(v) }))
+    .sort((a, b) => (a.status.kmLeft ?? 9e9) - (b.status.kmLeft ?? 9e9))
+    .slice(0, 3);
+
+  const liveKpis = kpis.map((kpi) =>
+    kpi.id === "service"
+      ? {
+          ...kpi,
+          value: String(toSummary.overdue),
+          delta: `${toSummary.soon} скоро по пробегу`,
+          tone: toSummary.overdue > 0 ? ("danger" as const) : ("success" as const),
+        }
+      : kpi,
+  );
 
   return (
     <div className="space-y-4">
@@ -49,7 +66,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {kpis.map((kpi) => (
+        {liveKpis.map((kpi) => (
           <KpiCard key={kpi.id} {...kpi} />
         ))}
       </div>
@@ -139,31 +156,35 @@ export default function DashboardPage() {
               title="Ближайшее ТО"
               action={
                 <Link
-                  href="/service"
+                  href="/maintenance"
                   className="text-[12px] font-medium text-[var(--accent)]"
                 >
-                  Сервис
+                  График ТО
                 </Link>
               }
             />
             <ul className="divide-y divide-[var(--border)]">
-              {serviceOrders.slice(0, 3).map((order) => (
+              {upcoming.map(({ v, status }) => (
                 <li
-                  key={order.id}
+                  key={v.id}
                   className="flex items-center justify-between gap-3 px-4 py-3"
                 >
                   <div>
-                    <p className="text-[13px] font-medium">{order.vehicle}</p>
+                    <p className="text-[13px] font-medium">{v.plate}</p>
                     <p className="text-[12px] text-[var(--fg-secondary)]">
-                      {order.title}
+                      {v.nextServiceNote || v.model}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-[12px] text-[var(--fg-tertiary)]">
-                      {order.due}
+                      {formatDateRu(v.nextService)}
                     </p>
                     <p className="text-[12px] font-medium">
-                      {formatCurrency(order.cost)}
+                      {status.kmLeft === null
+                        ? "—"
+                        : status.kmLeft <= 0
+                          ? `просрочено ${formatNumber(Math.abs(status.kmLeft), 0)} км`
+                          : `${formatNumber(status.kmLeft, 0)} км`}
                     </p>
                   </div>
                 </li>

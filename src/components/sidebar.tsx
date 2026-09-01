@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
+  CalendarClock,
   CircleDot,
   ClipboardList,
   IdCard,
@@ -24,6 +25,7 @@ import { cn } from "@/lib/utils";
 const icons = {
   LayoutDashboard,
   Truck,
+  CalendarClock,
   IdCard,
   ClipboardList,
   Wrench,
