@@ -12,6 +12,8 @@ import type { Vehicle } from "@/lib/data";
 import {
   DEFAULT_TRAILERS,
   DEFAULT_VEHICLES,
+  LEGACY_VEHICLES_STORAGE_KEY,
+  normalizeVehicle,
   Trailer,
   TrailerInput,
   TRAILERS_STORAGE_KEY,
@@ -65,6 +67,40 @@ function saveList<T>(key: string, list: T[]) {
   window.localStorage.setItem(key, JSON.stringify(list));
 }
 
+function loadVehicles(): Vehicle[] {
+  try {
+    const raw = window.localStorage.getItem(VEHICLES_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<Vehicle>[];
+      if (Array.isArray(parsed)) {
+        const list = parsed
+          .filter((v): v is Partial<Vehicle> & { id: string } => Boolean(v?.id))
+          .map(normalizeVehicle);
+        saveList(VEHICLES_STORAGE_KEY, list);
+        return list;
+      }
+    }
+
+    const legacyRaw = window.localStorage.getItem(LEGACY_VEHICLES_STORAGE_KEY);
+    if (legacyRaw) {
+      const parsed = JSON.parse(legacyRaw) as Partial<Vehicle>[];
+      if (Array.isArray(parsed)) {
+        const list = parsed
+          .filter((v): v is Partial<Vehicle> & { id: string } => Boolean(v?.id))
+          .map(normalizeVehicle);
+        saveList(VEHICLES_STORAGE_KEY, list);
+        return list;
+      }
+    }
+  } catch {
+    /* fall through */
+  }
+
+  const fallback = DEFAULT_VEHICLES.map((v) => normalizeVehicle(v));
+  saveList(VEHICLES_STORAGE_KEY, fallback);
+  return fallback;
+}
+
 export function FleetProvider({ children }: { children: React.ReactNode }) {
   const [vehicles, setVehicles] = useState<Vehicle[]>(DEFAULT_VEHICLES);
   const [trailers, setTrailers] = useState<Trailer[]>(DEFAULT_TRAILERS);
@@ -72,7 +108,7 @@ export function FleetProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     queueMicrotask(() => {
-      setVehicles(loadList(VEHICLES_STORAGE_KEY, DEFAULT_VEHICLES));
+      setVehicles(loadVehicles());
       setTrailers(loadList(TRAILERS_STORAGE_KEY, DEFAULT_TRAILERS));
       setReady(true);
     });
@@ -84,11 +120,12 @@ export function FleetProvider({ children }: { children: React.ReactNode }) {
     if (!plate || !model) {
       return { ok: false as const, error: "Укажите госномер и модель" };
     }
-    const list = loadList<Vehicle>(VEHICLES_STORAGE_KEY, DEFAULT_VEHICLES);
+    const list = loadVehicles();
     if (list.some((v) => v.plate.toUpperCase() === plate)) {
       return { ok: false as const, error: "ТС с таким госномером уже есть" };
     }
-    const vehicle: Vehicle = {
+    const today = new Date().toISOString().slice(0, 10);
+    const vehicle = normalizeVehicle({
       id: `v-${Date.now()}`,
       plate,
       model,
@@ -98,9 +135,12 @@ export function FleetProvider({ children }: { children: React.ReactNode }) {
       costPerKm: Number.isFinite(input.costPerKm) ? input.costPerKm : 0,
       fuelNorm: Number.isFinite(input.fuelNorm) ? input.fuelNorm : 0,
       fuelFact: Number.isFinite(input.fuelNorm) ? input.fuelNorm : 0,
-      nextService: input.nextService || new Date().toISOString().slice(0, 10),
+      lastService: input.lastService || "",
+      lastServiceNote: input.lastServiceNote.trim(),
+      nextService: input.nextService || today,
+      nextServiceNote: input.nextServiceNote.trim(),
       status: input.status || "active",
-    };
+    });
     const next = [vehicle, ...list];
     saveList(VEHICLES_STORAGE_KEY, next);
     setVehicles(next);
@@ -108,18 +148,20 @@ export function FleetProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateVehicle = useCallback((id: string, patch: Partial<Vehicle>) => {
-    const list = loadList<Vehicle>(VEHICLES_STORAGE_KEY, DEFAULT_VEHICLES);
+    const list = loadVehicles();
     if (!list.some((v) => v.id === id)) {
       return { ok: false as const, error: "ТС не найдено" };
     }
-    const next = list.map((v) => (v.id === id ? { ...v, ...patch } : v));
+    const next = list.map((v) =>
+      v.id === id ? normalizeVehicle({ ...v, ...patch, id }) : v,
+    );
     saveList(VEHICLES_STORAGE_KEY, next);
     setVehicles(next);
     return { ok: true as const };
   }, []);
 
   const deleteVehicle = useCallback((id: string) => {
-    const list = loadList<Vehicle>(VEHICLES_STORAGE_KEY, DEFAULT_VEHICLES);
+    const list = loadVehicles();
     if (!list.some((v) => v.id === id)) {
       return { ok: false as const, error: "ТС не найдено" };
     }

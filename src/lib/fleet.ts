@@ -14,8 +14,9 @@ export type Trailer = {
   status: TrailerStatus;
 };
 
-export const VEHICLES_STORAGE_KEY = "mechanik-vehicles-v1";
+export const VEHICLES_STORAGE_KEY = "mechanik-vehicles-v2";
 export const TRAILERS_STORAGE_KEY = "mechanik-trailers-v1";
+export const LEGACY_VEHICLES_STORAGE_KEY = "mechanik-vehicles-v1";
 
 export const vehicleTypes = [
   "Грузовой",
@@ -77,9 +78,37 @@ export type VehicleInput = {
   odometer: number;
   costPerKm: number;
   fuelNorm: number;
+  lastService: string;
+  lastServiceNote: string;
   nextService: string;
+  nextServiceNote: string;
   status: VehicleStatus;
 };
+
+/** Нормализация ТС из старого localStorage без полей ТО. */
+export function normalizeVehicle(raw: Partial<Vehicle> & { id: string }): Vehicle {
+  const today = new Date().toISOString().slice(0, 10);
+  return {
+    id: raw.id,
+    plate: raw.plate ?? "",
+    model: raw.model ?? "",
+    type: raw.type ?? "Грузовой",
+    driver: raw.driver ?? "Не назначен",
+    odometer: Number.isFinite(raw.odometer) ? Number(raw.odometer) : 0,
+    costPerKm: Number.isFinite(raw.costPerKm) ? Number(raw.costPerKm) : 0,
+    fuelNorm: Number.isFinite(raw.fuelNorm) ? Number(raw.fuelNorm) : 0,
+    fuelFact: Number.isFinite(raw.fuelFact)
+      ? Number(raw.fuelFact)
+      : Number.isFinite(raw.fuelNorm)
+        ? Number(raw.fuelNorm)
+        : 0,
+    lastService: raw.lastService || "",
+    lastServiceNote: raw.lastServiceNote || "",
+    nextService: raw.nextService || today,
+    nextServiceNote: raw.nextServiceNote || "",
+    status: (raw.status as VehicleStatus) || "active",
+  };
+}
 
 export type TrailerInput = {
   plate: string;

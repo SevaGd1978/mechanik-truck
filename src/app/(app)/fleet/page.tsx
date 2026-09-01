@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { Segmented } from "@/components/ui/segmented";
 import { DataTable, Td, Tr } from "@/components/ui/data-table";
-import type { VehicleStatus } from "@/lib/data";
+import type { Vehicle, VehicleStatus } from "@/lib/data";
 import {
   canManageFleet,
   TrailerStatus,
@@ -34,12 +34,46 @@ const trailerStatusMap = {
 const inputClass =
   "mt-1.5 h-10 w-full rounded-[10px] border border-[var(--border-strong)] bg-[var(--bg-input)] px-3 text-[13px] outline-none focus:border-[var(--accent)]";
 
+const textareaClass =
+  "mt-1.5 min-h-[72px] w-full resize-y rounded-[10px] border border-[var(--border-strong)] bg-[var(--bg-input)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]";
+
+function formatDateRu(iso: string) {
+  if (!iso) return "—";
+  const [y, m, d] = iso.split("-");
+  if (!y || !m || !d) return iso;
+  return `${d}.${m}.${y}`;
+}
+
+function ServiceCell({
+  date,
+  note,
+}: {
+  date: string;
+  note: string;
+}) {
+  return (
+    <div className="max-w-[220px]">
+      <div className="font-medium text-[var(--fg)]">{formatDateRu(date)}</div>
+      {note ? (
+        <div className="mt-0.5 text-[11px] leading-snug text-[var(--fg-tertiary)]">
+          {note}
+        </div>
+      ) : (
+        <div className="mt-0.5 text-[11px] text-[var(--fg-tertiary)]">
+          без описания
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function FleetPage() {
   const { currentUser } = useAuth();
   const {
     vehicles,
     trailers,
     addVehicle,
+    updateVehicle,
     deleteVehicle,
     addTrailer,
     deleteTrailer,
@@ -51,6 +85,7 @@ export default function FleetPage() {
   const [query, setQuery] = useState("");
   const [showVehicleForm, setShowVehicleForm] = useState(false);
   const [showTrailerForm, setShowTrailerForm] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [message, setMessage] = useState<{
     type: "ok" | "err";
     text: string;
@@ -63,10 +98,18 @@ export default function FleetPage() {
   const [vOdometer, setVOdometer] = useState("0");
   const [vCost, setVCost] = useState("25");
   const [vFuel, setVFuel] = useState("20");
+  const [vLastService, setVLastService] = useState("");
+  const [vLastNote, setVLastNote] = useState("");
   const [vService, setVService] = useState(
     new Date().toISOString().slice(0, 10),
   );
+  const [vNextNote, setVNextNote] = useState("");
   const [vStatus, setVStatus] = useState<VehicleStatus>("active");
+
+  const [eLastService, setELastService] = useState("");
+  const [eLastNote, setELastNote] = useState("");
+  const [eNextService, setENextService] = useState("");
+  const [eNextNote, setENextNote] = useState("");
 
   const [tPlate, setTPlate] = useState("");
   const [tModel, setTModel] = useState("");
@@ -86,7 +129,9 @@ export default function FleetPage() {
         !q ||
         v.plate.toLowerCase().includes(q) ||
         v.model.toLowerCase().includes(q) ||
-        v.driver.toLowerCase().includes(q);
+        v.driver.toLowerCase().includes(q) ||
+        v.lastServiceNote.toLowerCase().includes(q) ||
+        v.nextServiceNote.toLowerCase().includes(q);
       return matchFilter && matchQuery;
     });
   }, [vehicles, filter, query]);
@@ -104,6 +149,16 @@ export default function FleetPage() {
     });
   }, [trailers, query]);
 
+  function openEditService(v: Vehicle) {
+    setEditingVehicle(v);
+    setELastService(v.lastService || "");
+    setELastNote(v.lastServiceNote || "");
+    setENextService(v.nextService || "");
+    setENextNote(v.nextServiceNote || "");
+    setShowVehicleForm(false);
+    setMessage(null);
+  }
+
   function onAddVehicle(e: FormEvent) {
     e.preventDefault();
     const result = addVehicle({
@@ -114,7 +169,10 @@ export default function FleetPage() {
       odometer: Number(vOdometer) || 0,
       costPerKm: Number(vCost) || 0,
       fuelNorm: Number(vFuel) || 0,
+      lastService: vLastService,
+      lastServiceNote: vLastNote,
       nextService: vService,
+      nextServiceNote: vNextNote,
       status: vStatus,
     });
     if (!result.ok) {
@@ -129,7 +187,30 @@ export default function FleetPage() {
     setVModel("");
     setVDriver("");
     setVOdometer("0");
+    setVLastService("");
+    setVLastNote("");
+    setVNextNote("");
     setShowVehicleForm(false);
+  }
+
+  function onSaveService(e: FormEvent) {
+    e.preventDefault();
+    if (!editingVehicle) return;
+    const res = updateVehicle(editingVehicle.id, {
+      lastService: eLastService,
+      lastServiceNote: eLastNote.trim(),
+      nextService: eNextService,
+      nextServiceNote: eNextNote.trim(),
+    });
+    if (!res.ok) {
+      setMessage({ type: "err", text: res.error });
+      return;
+    }
+    setMessage({
+      type: "ok",
+      text: `ТО для ${editingVehicle.plate} обновлено`,
+    });
+    setEditingVehicle(null);
   }
 
   function onAddTrailer(e: FormEvent) {
@@ -166,6 +247,7 @@ export default function FleetPage() {
           onChange={(v) => {
             setTab(v as "vehicles" | "trailers");
             setMessage(null);
+            setEditingVehicle(null);
           }}
           options={[
             { label: `Машины (${vehicles.length})`, value: "vehicles" },
@@ -181,6 +263,7 @@ export default function FleetPage() {
                 setTab("vehicles");
                 setShowVehicleForm(true);
                 setShowTrailerForm(false);
+                setEditingVehicle(null);
               }}
             >
               Добавить машину
@@ -192,6 +275,7 @@ export default function FleetPage() {
                 setTab("trailers");
                 setShowTrailerForm(true);
                 setShowVehicleForm(false);
+                setEditingVehicle(null);
               }}
             >
               Добавить прицеп
@@ -324,15 +408,6 @@ export default function FleetPage() {
                 />
               </label>
               <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
-                Следующее ТО
-                <input
-                  className={inputClass}
-                  type="date"
-                  value={vService}
-                  onChange={(e) => setVService(e.target.value)}
-                />
-              </label>
-              <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
                 Статус
                 <select
                   className={inputClass}
@@ -345,6 +420,49 @@ export default function FleetPage() {
                   <option value="alert">Внимание</option>
                 </select>
               </label>
+
+              <div className="md:col-span-2 xl:col-span-3 grid gap-3 rounded-[12px] border border-[var(--border)] bg-[var(--bg-elevated)] p-3 md:grid-cols-2">
+                <p className="md:col-span-2 text-[12px] font-semibold text-[var(--fg)]">
+                  Техническое обслуживание
+                </p>
+                <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
+                  Дата прошедшего ТО
+                  <input
+                    className={inputClass}
+                    type="date"
+                    value={vLastService}
+                    onChange={(e) => setVLastService(e.target.value)}
+                  />
+                </label>
+                <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
+                  Дата планового ТО
+                  <input
+                    className={inputClass}
+                    type="date"
+                    value={vService}
+                    onChange={(e) => setVService(e.target.value)}
+                  />
+                </label>
+                <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
+                  Описание прошедшего ТО
+                  <textarea
+                    className={textareaClass}
+                    value={vLastNote}
+                    onChange={(e) => setVLastNote(e.target.value)}
+                    placeholder="Например: ТО-1, замена масла и фильтров"
+                  />
+                </label>
+                <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
+                  Описание планового ТО
+                  <textarea
+                    className={textareaClass}
+                    value={vNextNote}
+                    onChange={(e) => setVNextNote(e.target.value)}
+                    placeholder="Например: ТО-2 по пробегу, диагностика тормозов"
+                  />
+                </label>
+              </div>
+
               <div className="flex items-end gap-2 md:col-span-2 xl:col-span-3">
                 <Button type="submit" size="sm">
                   Сохранить машину
@@ -361,6 +479,67 @@ export default function FleetPage() {
             </form>
           ) : null}
 
+          {editingVehicle && canEdit ? (
+            <form
+              onSubmit={onSaveService}
+              className="m-4 grid gap-3 rounded-[14px] border border-[var(--border)] bg-[var(--bg-window)] p-4 md:grid-cols-2"
+            >
+              <p className="md:col-span-2 text-[13px] font-semibold text-[var(--fg)]">
+                ТО · {editingVehicle.plate} · {editingVehicle.model}
+              </p>
+              <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
+                Дата прошедшего ТО
+                <input
+                  className={inputClass}
+                  type="date"
+                  value={eLastService}
+                  onChange={(e) => setELastService(e.target.value)}
+                />
+              </label>
+              <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
+                Дата планового ТО
+                <input
+                  className={inputClass}
+                  type="date"
+                  value={eNextService}
+                  onChange={(e) => setENextService(e.target.value)}
+                  required
+                />
+              </label>
+              <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
+                Описание прошедшего ТО
+                <textarea
+                  className={textareaClass}
+                  value={eLastNote}
+                  onChange={(e) => setELastNote(e.target.value)}
+                  placeholder="Что было сделано"
+                />
+              </label>
+              <label className="block text-[12px] font-medium text-[var(--fg-secondary)]">
+                Описание планового ТО
+                <textarea
+                  className={textareaClass}
+                  value={eNextNote}
+                  onChange={(e) => setENextNote(e.target.value)}
+                  placeholder="Что запланировано"
+                />
+              </label>
+              <div className="flex items-end gap-2 md:col-span-2">
+                <Button type="submit" size="sm">
+                  Сохранить ТО
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setEditingVehicle(null)}
+                >
+                  Отмена
+                </Button>
+              </div>
+            </form>
+          ) : null}
+
           <DataTable
             headers={[
               "Госномер",
@@ -368,8 +547,8 @@ export default function FleetPage() {
               "Тип",
               "Водитель",
               "Пробег",
-              "1 км",
-              "ТО",
+              "Прошедшее ТО",
+              "Плановое ТО",
               "Статус",
               ...(canEdit ? ["Действия"] : []),
             ]}
@@ -383,8 +562,12 @@ export default function FleetPage() {
                 <Td className="font-mono text-[12px]">
                   {formatNumber(v.odometer, 0)} км
                 </Td>
-                <Td>{formatNumber(v.costPerKm)} ₽</Td>
-                <Td className="text-[var(--fg-secondary)]">{v.nextService}</Td>
+                <Td>
+                  <ServiceCell date={v.lastService} note={v.lastServiceNote} />
+                </Td>
+                <Td>
+                  <ServiceCell date={v.nextService} note={v.nextServiceNote} />
+                </Td>
                 <Td>
                   <Badge tone={statusMap[v.status].tone}>
                     {statusMap[v.status].label}
@@ -392,21 +575,30 @@ export default function FleetPage() {
                 </Td>
                 {canEdit ? (
                   <Td>
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      onClick={() => {
-                        if (!window.confirm(`Удалить ${v.plate}?`)) return;
-                        const res = deleteVehicle(v.id);
-                        setMessage(
-                          res.ok
-                            ? { type: "ok", text: "Машина удалена" }
-                            : { type: "err", text: res.error },
-                        );
-                      }}
-                    >
-                      Удалить
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => openEditService(v)}
+                      >
+                        ТО
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        onClick={() => {
+                          if (!window.confirm(`Удалить ${v.plate}?`)) return;
+                          const res = deleteVehicle(v.id);
+                          setMessage(
+                            res.ok
+                              ? { type: "ok", text: "Машина удалена" }
+                              : { type: "err", text: res.error },
+                          );
+                        }}
+                      >
+                        Удалить
+                      </Button>
+                    </div>
                   </Td>
                 ) : null}
               </Tr>
@@ -556,7 +748,9 @@ export default function FleetPage() {
                 <Td className="text-[var(--fg-secondary)]">
                   {t.coupledTo || "—"}
                 </Td>
-                <Td className="text-[var(--fg-secondary)]">{t.nextService}</Td>
+                <Td className="text-[var(--fg-secondary)]">
+                  {formatDateRu(t.nextService)}
+                </Td>
                 <Td>
                   <Badge tone={trailerStatusMap[t.status].tone}>
                     {trailerStatusMap[t.status].label}

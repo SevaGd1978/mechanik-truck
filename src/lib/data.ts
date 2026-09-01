@@ -10,7 +10,14 @@ export type Vehicle = {
   costPerKm: number;
   fuelNorm: number;
   fuelFact: number;
+  /** Дата прошедшего ТО (ISO yyyy-mm-dd) */
+  lastService: string;
+  /** Описание выполненного ТО */
+  lastServiceNote: string;
+  /** Дата планового ТО (ISO yyyy-mm-dd) */
   nextService: string;
+  /** Описание планового ТО */
+  nextServiceNote: string;
   status: VehicleStatus;
 };
 
@@ -65,7 +72,10 @@ export const vehicles: Vehicle[] = [
     costPerKm: 31.2,
     fuelNorm: 28.5,
     fuelFact: 29.1,
+    lastService: "2026-05-14",
+    lastServiceNote: "ТО-1: замена масла, масляного и воздушного фильтров",
     nextService: "2026-08-22",
+    nextServiceNote: "ТО-2 по пробегу: тормоза, ремни, диагностика",
     status: "active",
   },
   {
@@ -78,7 +88,10 @@ export const vehicles: Vehicle[] = [
     costPerKm: 34.8,
     fuelNorm: 27.0,
     fuelFact: 31.4,
+    lastService: "2026-02-10",
+    lastServiceNote: "Сезонное ТО: АКБ, антифриз, проверка ходовой",
     nextService: "2026-08-18",
+    nextServiceNote: "Замена масла и фильтров (просрочено)",
     status: "alert",
   },
   {
@@ -91,7 +104,10 @@ export const vehicles: Vehicle[] = [
     costPerKm: 18.6,
     fuelNorm: 11.2,
     fuelFact: 10.9,
+    lastService: "2026-06-20",
+    lastServiceNote: "Замена тормозных колодок и тормозной жидкости",
     nextService: "2026-09-02",
+    nextServiceNote: "Плановое ТО: масло, свечи, осмотр подвески",
     status: "active",
   },
   {
@@ -104,7 +120,10 @@ export const vehicles: Vehicle[] = [
     costPerKm: 36.1,
     fuelNorm: 30.0,
     fuelFact: 30.2,
+    lastService: "2026-04-03",
+    lastServiceNote: "ТО-2: сцепление, регулировка клапанов",
     nextService: "2026-08-19",
+    nextServiceNote: "Диагностика КПП и замена трансмиссионного масла",
     status: "service",
   },
   {
@@ -117,7 +136,10 @@ export const vehicles: Vehicle[] = [
     costPerKm: 88.4,
     fuelNorm: 18.0,
     fuelFact: 17.6,
+    lastService: "2026-07-01",
+    lastServiceNote: "Замена гидравлического шланга и фильтров гидравлики",
     nextService: "2026-08-28",
+    nextServiceNote: "Плановый осмотр навесного оборудования",
     status: "idle",
   },
   {
@@ -130,7 +152,10 @@ export const vehicles: Vehicle[] = [
     costPerKm: 16.9,
     fuelNorm: 12.5,
     fuelFact: 13.8,
+    lastService: "2026-03-28",
+    lastServiceNote: "ТО-1: масло, фильтры, проверка ГРМ",
     nextService: "2026-09-10",
+    nextServiceNote: "Плановое ТО: свечи, ремень генератора",
     status: "active",
   },
 ];
