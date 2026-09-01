@@ -10,7 +10,7 @@ import { Panel, PanelHeader } from "@/components/ui/panel";
 import { Segmented } from "@/components/ui/segmented";
 import { DataTable, Td, Tr } from "@/components/ui/data-table";
 import type { Vehicle } from "@/lib/data";
-import { canManageFleet } from "@/lib/fleet";
+import { canManageMaintenance } from "@/lib/auth";
 import {
   formatDateRu,
   getMaintenanceStatus,
@@ -51,7 +51,7 @@ function KmCell({
 export default function MaintenancePage() {
   const { currentUser } = useAuth();
   const { vehicles, updateVehicle } = useFleet();
-  const canEdit = currentUser ? canManageFleet(currentUser.role) : false;
+  const canEdit = currentUser ? canManageMaintenance(currentUser) : false;
 
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");

@@ -25,7 +25,7 @@ export function MobileBottomNav({ onMore }: { onMore: () => void }) {
   const { currentUser } = useAuth();
 
   const items = primaryItems.filter((item) =>
-    currentUser ? canAccessRoute(currentUser.role, item.href) : false,
+    currentUser ? canAccessRoute(currentUser, item.href) : false,
   );
 
   return (

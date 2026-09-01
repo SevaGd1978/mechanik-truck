@@ -1,7 +1,7 @@
 import { Pool, type QueryResultRow } from "pg";
 import { promises as fs } from "fs";
 import path from "path";
-import { DEFAULT_USERS, type AppUser } from "@/lib/auth";
+import { DEFAULT_USERS, normalizeUser, type AppUser } from "@/lib/auth";
 import { DEFAULT_VEHICLES } from "@/lib/fleet";
 import { DEFAULT_DRIVERS, type Driver } from "@/lib/drivers";
 import type { Vehicle } from "@/lib/data";
@@ -63,10 +63,46 @@ function publicUser(u: AppUser): Omit<AppUser, "password"> {
   return rest;
 }
 
+function asUser(raw: Partial<AppUser> & { id?: string; login?: string; created_at?: string }): AppUser {
+  return normalizeUser({
+    id: raw.id || `u-${Date.now()}`,
+    login: raw.login || "",
+    password: raw.password,
+    name: raw.name,
+    role: raw.role,
+    active: raw.active,
+    createdAt: raw.createdAt || raw.created_at,
+    responsibilities: raw.responsibilities,
+  });
+}
+
+function parsePgUser(row: Record<string, unknown>) {
+  let responsibilities: unknown = row.responsibilities;
+  if (typeof responsibilities === "string") {
+    try {
+      responsibilities = JSON.parse(responsibilities);
+    } catch {
+      responsibilities = undefined;
+    }
+  }
+  return {
+    id: String(row.id ?? ""),
+    login: String(row.login ?? ""),
+    password: String(row.password ?? ""),
+    name: String(row.name ?? ""),
+    role: row.role as AppUser["role"],
+    active: Boolean(row.active),
+    createdAt: String(row.createdAt ?? row.created_at ?? ""),
+    responsibilities: Array.isArray(responsibilities)
+      ? (responsibilities as AppUser["responsibilities"])
+      : undefined,
+  };
+}
+
 function seedFileDb(): FileDb {
   const now = new Date().toISOString();
   return {
-    users: DEFAULT_USERS.map((u) => ({ ...u })),
+    users: DEFAULT_USERS.map((u) => asUser(u)),
     vehicles: DEFAULT_VEHICLES.map((v) => ({ ...v })),
     drivers: DEFAULT_DRIVERS.map((d) => ({ ...d })),
     tokens: {},
@@ -85,6 +121,7 @@ async function readFileDb(): Promise<FileDb> {
       return seeded;
     }
     parsed.tokens = parsed.tokens || {};
+    parsed.users = parsed.users.map((u) => asUser(u));
     return parsed;
   } catch {
     const seeded = seedFileDb();
@@ -131,14 +168,27 @@ async function initPostgres() {
       value TEXT NOT NULL
     );
   `);
+  await p.query(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS responsibilities TEXT
+      NOT NULL DEFAULT '["warehouse","tires","maintenance"]'
+  `);
 
   const usersCount = await p.query<{ c: string }>("SELECT COUNT(*)::text AS c FROM users");
   if (Number(usersCount.rows[0]?.c || 0) === 0) {
     for (const u of DEFAULT_USERS) {
       await p.query(
-        `INSERT INTO users (id, login, password, name, role, active, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO NOTHING`,
-        [u.id, u.login, u.password, u.name, u.role, u.active, u.createdAt],
+        `INSERT INTO users (id, login, password, name, role, active, created_at, responsibilities)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (id) DO NOTHING`,
+        [
+          u.id,
+          u.login,
+          u.password,
+          u.name,
+          u.role,
+          u.active,
+          u.createdAt,
+          JSON.stringify(u.responsibilities),
+        ],
       );
     }
   }
@@ -205,12 +255,13 @@ export async function loginUser(login: string, password: string) {
   const normalized = login.trim().toLowerCase();
 
   if (usePostgres()) {
-    const res = await getPool().query<AppUser>(
-      `SELECT id, login, password, name, role, active, created_at AS "createdAt"
+    const res = await getPool().query(
+      `SELECT id, login, password, name, role, active, created_at AS "createdAt",
+              responsibilities
        FROM users WHERE lower(login) = $1 LIMIT 1`,
       [normalized],
     );
-    const user = res.rows[0];
+    const user = res.rows[0] ? asUser(parsePgUser(res.rows[0])) : null;
     if (!user || !user.active || user.password !== password) {
       return null;
     }
@@ -238,14 +289,14 @@ export async function userFromToken(token: string | null) {
   await ensureDb();
 
   if (usePostgres()) {
-    const res = await getPool().query<AppUser>(
+    const res = await getPool().query(
       `SELECT u.id, u.login, u.password, u.name, u.role, u.active,
-              u.created_at AS "createdAt"
+              u.created_at AS "createdAt", u.responsibilities
        FROM tokens t JOIN users u ON u.id = t.user_id
        WHERE t.token = $1 LIMIT 1`,
       [token],
     );
-    const user = res.rows[0];
+    const user = res.rows[0] ? asUser(parsePgUser(res.rows[0])) : null;
     if (!user || !user.active) return null;
     return publicUser(user);
   }
@@ -265,8 +316,9 @@ export async function getSnapshot(): Promise<SyncSnapshot> {
     const [vehicles, drivers, users, meta] = await Promise.all([
       p.query<{ payload: Vehicle }>("SELECT payload FROM vehicles ORDER BY id"),
       p.query<{ payload: Driver }>("SELECT payload FROM drivers ORDER BY id"),
-      p.query<AppUser>(
-        `SELECT id, login, password, name, role, active, created_at AS "createdAt" FROM users ORDER BY login`,
+      p.query(
+        `SELECT id, login, password, name, role, active, created_at AS "createdAt",
+                responsibilities FROM users ORDER BY login`,
       ),
       p.query<{ value: string }>(
         `SELECT value FROM meta WHERE key = 'updated_at' LIMIT 1`,
@@ -275,7 +327,9 @@ export async function getSnapshot(): Promise<SyncSnapshot> {
     return {
       vehicles: vehicles.rows.map((r) => r.payload),
       drivers: drivers.rows.map((r) => r.payload),
-      users: users.rows.map(publicUser),
+      users: users.rows.map((row) =>
+        publicUser(asUser(parsePgUser(row as Record<string, unknown>))),
+      ),
       updatedAt: meta.rows[0]?.value || new Date().toISOString(),
       store: "postgres",
     };

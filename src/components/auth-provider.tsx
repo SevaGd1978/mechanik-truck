@@ -10,8 +10,12 @@ import {
 } from "react";
 import {
   AppUser,
+  ALL_RESPONSIBILITIES,
   canAssignRole,
   DEFAULT_USERS,
+  LEGACY_USERS_STORAGE_KEY,
+  normalizeUser,
+  Responsibility,
   SESSION_STORAGE_KEY,
   UserRole,
   USERS_STORAGE_KEY,
@@ -31,10 +35,13 @@ type AuthContextValue = {
     password: string;
     name: string;
     role: UserRole;
+    responsibilities?: Responsibility[];
   }) => { ok: true; user: AppUser } | { ok: false; error: string };
   updateUser: (
     id: string,
-    patch: Partial<Pick<AppUser, "name" | "password" | "role" | "active">>,
+    patch: Partial<
+      Pick<AppUser, "name" | "password" | "role" | "active" | "responsibilities">
+    >,
   ) => { ok: true } | { ok: false; error: string };
   deleteUser: (id: string) => { ok: true } | { ok: false; error: string };
 };
@@ -43,25 +50,29 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 function loadUsers(): AppUser[] {
   try {
-    const raw = window.localStorage.getItem(USERS_STORAGE_KEY);
+    const raw =
+      window.localStorage.getItem(USERS_STORAGE_KEY) ||
+      window.localStorage.getItem(LEGACY_USERS_STORAGE_KEY);
     if (!raw) {
-      window.localStorage.setItem(
-        USERS_STORAGE_KEY,
-        JSON.stringify(DEFAULT_USERS),
-      );
-      return [...DEFAULT_USERS];
+      const seeded = DEFAULT_USERS.map((u) => normalizeUser(u));
+      window.localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(seeded));
+      return seeded;
     }
-    const parsed = JSON.parse(raw) as AppUser[];
+    const parsed = JSON.parse(raw) as Partial<AppUser>[];
     if (!Array.isArray(parsed) || parsed.length === 0) {
-      window.localStorage.setItem(
-        USERS_STORAGE_KEY,
-        JSON.stringify(DEFAULT_USERS),
-      );
-      return [...DEFAULT_USERS];
+      const seeded = DEFAULT_USERS.map((u) => normalizeUser(u));
+      window.localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(seeded));
+      return seeded;
     }
-    return parsed;
+    const list = parsed
+      .filter((u): u is Partial<AppUser> & { id: string; login: string } =>
+        Boolean(u?.id && u?.login),
+      )
+      .map(normalizeUser);
+    window.localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(list));
+    return list;
   } catch {
-    return [...DEFAULT_USERS];
+    return DEFAULT_USERS.map((u) => normalizeUser(u));
   }
 }
 
@@ -118,6 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password: string;
       name: string;
       role: UserRole;
+      responsibilities?: Responsibility[];
     }) => {
       if (!currentUser) return { ok: false as const, error: "Нет сессии" };
       if (!canAssignRole(currentUser.role, input.role)) {
@@ -134,7 +146,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (list.some((u) => u.login.toLowerCase() === normalizedLogin)) {
         return { ok: false as const, error: "Такой логин уже существует" };
       }
-      const user: AppUser = {
+      const responsibilities =
+        currentUser.role === "admin" && input.role !== "admin"
+          ? input.responsibilities ?? []
+          : input.role === "admin"
+            ? [...ALL_RESPONSIBILITIES]
+            : [];
+      const user = normalizeUser({
         id: `u-${Date.now()}`,
         login: normalizedLogin,
         password: input.password,
@@ -142,7 +160,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: input.role,
         active: true,
         createdAt: new Date().toISOString().slice(0, 10),
-      };
+        responsibilities,
+      });
       const next = [user, ...list];
       persistUsers(next);
       setUsers(next);
@@ -154,7 +173,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateUser = useCallback(
     (
       id: string,
-      patch: Partial<Pick<AppUser, "name" | "password" | "role" | "active">>,
+      patch: Partial<
+        Pick<AppUser, "name" | "password" | "role" | "active" | "responsibilities">
+      >,
     ) => {
       if (!currentUser) return { ok: false as const, error: "Нет сессии" };
       const list = loadUsers();
@@ -166,19 +187,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (currentUser.role === "manager" && target.role === "admin") {
         return { ok: false as const, error: "Нельзя изменять администратора" };
       }
+      if (patch.responsibilities && currentUser.role !== "admin") {
+        return {
+          ok: false as const,
+          error: "Только администратор назначает ответственность",
+        };
+      }
       if (id === currentUser.id && patch.active === false) {
         return { ok: false as const, error: "Нельзя отключить себя" };
       }
-      const next = list.map((u) =>
-        u.id === id
-          ? {
-              ...u,
-              ...patch,
-              password: patch.password?.trim() ? patch.password : u.password,
-              name: patch.name?.trim() ? patch.name.trim() : u.name,
-            }
-          : u,
-      );
+      const next = list.map((u) => {
+        if (u.id !== id) return u;
+        return normalizeUser({
+          ...u,
+          ...patch,
+          password: patch.password?.trim() ? patch.password : u.password,
+          name: patch.name?.trim() ? patch.name.trim() : u.name,
+        });
+      });
       persistUsers(next);
       setUsers(next);
       return { ok: true as const };

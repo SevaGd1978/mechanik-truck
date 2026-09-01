@@ -7,8 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { DataTable, Td, Tr } from "@/components/ui/data-table";
 import {
+  canAssignResponsibilities,
   canAssignRole,
   canManageUsers,
+  effectiveResponsibilities,
+  RESPONSIBILITIES,
+  Responsibility,
   roleDescriptions,
   roleLabels,
   UserRole,
@@ -26,11 +30,14 @@ export default function UsersPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState<UserRole>("mechanic");
+  const [createPerms, setCreatePerms] = useState<Responsibility[]>([]);
   const [message, setMessage] = useState<{
     type: "ok" | "err";
     text: string;
   } | null>(null);
   const [showForm, setShowForm] = useState(false);
+
+  const isAdmin = currentUser?.role === "admin";
 
   const assignableRoles = useMemo(() => {
     if (!currentUser) return [] as UserRole[];
@@ -50,9 +57,33 @@ export default function UsersPage() {
     );
   }
 
+  function toggleCreatePerm(key: Responsibility) {
+    setCreatePerms((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+    );
+  }
+
+  function toggleUserPerm(userId: string, current: Responsibility[], key: Responsibility) {
+    const next = current.includes(key)
+      ? current.filter((k) => k !== key)
+      : [...current, key];
+    const res = updateUser(userId, { responsibilities: next });
+    setMessage(
+      res.ok
+        ? { type: "ok", text: "Ответственность обновлена" }
+        : { type: "err", text: res.error },
+    );
+  }
+
   function onCreate(e: FormEvent) {
     e.preventDefault();
-    const result = addUser({ login, password, name, role });
+    const result = addUser({
+      login,
+      password,
+      name,
+      role,
+      responsibilities: role === "admin" ? undefined : createPerms,
+    });
     if (!result.ok) {
       setMessage({ type: "err", text: result.error });
       return;
@@ -64,6 +95,7 @@ export default function UsersPage() {
     setLogin("");
     setPassword("");
     setName("");
+    setCreatePerms([]);
     setRole(
       assignableRoles.includes("mechanic") ? "mechanic" : assignableRoles[0],
     );
@@ -75,7 +107,7 @@ export default function UsersPage() {
       <Panel>
         <PanelHeader
           title="Пользователи"
-          subtitle="Логины, пароли и роли доступа"
+          subtitle="Логины, роли и зоны ответственности"
           action={
             <Button size="sm" onClick={() => setShowForm((v) => !v)}>
               {showForm ? "Скрыть форму" : "Добавить пользователя"}
@@ -135,7 +167,11 @@ export default function UsersPage() {
               Роль
               <select
                 value={role}
-                onChange={(e) => setRole(e.target.value as UserRole)}
+                onChange={(e) => {
+                  const next = e.target.value as UserRole;
+                  setRole(next);
+                  if (next === "admin") setCreatePerms([]);
+                }}
                 className="mt-1.5 h-10 w-full rounded-[10px] border border-[var(--border-strong)] bg-[var(--bg-input)] px-3 text-[13px] outline-none focus:border-[var(--accent)]"
               >
                 {assignableRoles.map((r) => (
@@ -148,6 +184,28 @@ export default function UsersPage() {
             <p className="md:col-span-2 text-[12px] text-[var(--fg-secondary)]">
               {roleDescriptions[role]}
             </p>
+            {isAdmin && role !== "admin" ? (
+              <fieldset className="md:col-span-2 rounded-[12px] border border-[var(--border)] p-3">
+                <legend className="px-1 text-[12px] font-semibold text-[var(--fg)]">
+                  Ответственность (назначает администратор)
+                </legend>
+                <div className="mt-2 flex flex-wrap gap-3">
+                  {RESPONSIBILITIES.map((item) => (
+                    <label
+                      key={item.key}
+                      className="inline-flex items-center gap-2 text-[13px]"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={createPerms.includes(item.key)}
+                        onChange={() => toggleCreatePerm(item.key)}
+                      />
+                      {item.label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            ) : null}
             <div className="md:col-span-2">
               <Button type="submit" size="sm">
                 Создать пользователя
@@ -157,18 +215,66 @@ export default function UsersPage() {
         ) : null}
 
         <DataTable
-          headers={["Имя", "Логин", "Роль", "Статус", "Создан", "Действия"]}
+          headers={[
+            "Имя",
+            "Логин",
+            "Роль",
+            "Ответственность",
+            "Статус",
+            "Создан",
+            "Действия",
+          ]}
         >
           {users.map((user) => {
             const canEdit =
               currentUser.role === "admin" ||
               (currentUser.role === "manager" && user.role !== "admin");
+            const perms = effectiveResponsibilities(user);
             return (
               <Tr key={user.id}>
                 <Td className="font-medium">{user.name}</Td>
                 <Td className="font-mono text-[12px]">{user.login}</Td>
                 <Td>
                   <Badge tone={tones[user.role]}>{roleLabels[user.role]}</Badge>
+                </Td>
+                <Td>
+                  {user.role === "admin" ? (
+                    <span className="text-[12px] text-[var(--fg-secondary)]">
+                      Все разделы
+                    </span>
+                  ) : canAssignResponsibilities(currentUser.role) ? (
+                    <div className="flex flex-col gap-1">
+                      {RESPONSIBILITIES.map((item) => (
+                        <label
+                          key={item.key}
+                          className="inline-flex items-center gap-1.5 text-[12px]"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={perms.includes(item.key)}
+                            onChange={() =>
+                              toggleUserPerm(user.id, user.responsibilities, item.key)
+                            }
+                          />
+                          {item.label}
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-1">
+                      {perms.length === 0 ? (
+                        <span className="text-[12px] text-[var(--fg-tertiary)]">
+                          не назначено
+                        </span>
+                      ) : (
+                        perms.map((key) => (
+                          <Badge key={key} tone="accent">
+                            {RESPONSIBILITIES.find((r) => r.key === key)?.label}
+                          </Badge>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </Td>
                 <Td>
                   <Badge tone={user.active ? "success" : "neutral"}>
@@ -224,7 +330,8 @@ export default function UsersPage() {
                           size="sm"
                           variant="danger"
                           onClick={() => {
-                            if (!window.confirm(`Удалить ${user.login}?`)) return;
+                            if (!window.confirm(`Удалить ${user.login}?`))
+                              return;
                             const res = deleteUser(user.id);
                             setMessage(
                               res.ok
